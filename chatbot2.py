@@ -3,7 +3,7 @@ from typing import List
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
 from storyteller.models import *
-from storyteller.engine import FakeStoryRepository, StoryEngine, Chains
+from storyteller.engine import FileStoryRepository, StoryEngine, Chains
 from storyteller.commands import *
 import os
 import logging
@@ -58,10 +58,10 @@ def main():
 
     context = init_context(prompt_dir)
     chains = Chains(model=model, prompts=context.prompts)
-    repo = FakeStoryRepository()
+    repo = FileStoryRepository(repo_dir=os.path.expanduser("~/story_repo"))
 
-    if not os.path.exists(repo.repofile):
-        init_chars = load_file(f"{story_dir}/characters.md")
+    if not repo.story_exists("blah"):
+        init_chars = load_file(f"{story_dir}/chargen.md")
         context.story.characters = make_characters(chains.character_create_chain, descriptions=init_chars)
         repo.save("blah", context.story)
 
@@ -97,8 +97,11 @@ def main():
             
         # summarize after running command so that we don't accidentally summarize something that
         # needs replaying/rewriting.
-        engine.run_command(story_id, cmd)
-        engine.run_command(story_id, SummarizeCommand(chains, sink=lambda x: print(x, end="", flush=True), min_tokens=HISTORY_MIN_TOKENS, max_tokens=HISTORY_MAX_TOKENS))
+        try:
+            engine.run_command(story_id, cmd)
+            engine.run_command(story_id, SummarizeCommand(chains, sink=lambda x: print(x, end="", flush=True), min_tokens=HISTORY_MIN_TOKENS, max_tokens=HISTORY_MAX_TOKENS))
+        except Exception as e:
+            print(f"Something went wrong: {e}")
 
 if __name__ == "__main__":
     main()

@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from langchain_core.chat_history import BaseMessage, BaseChatMessageHistory
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
@@ -7,6 +8,7 @@ from .models import *
 
 from pydantic import BaseModel
 from typing import List, Sequence, TypeVar
+from threading import Lock
 
 import os
 
@@ -71,21 +73,60 @@ class Chains:
             history_messages_key="chat_history",
         )
 
-class StoryRepository:
+class StoryRepository(ABC):
+    @abstractmethod
+    def lock(self, story_id: str) -> None:
+        pass
+
+    @abstractmethod
+    def unlock(self, story_id: str) -> None:
+        pass
+
+    @abstractmethod
+    def story_exists(self, story_id: str) -> bool:
+        pass
+
+    @abstractmethod
     def load(self, story_id: str) -> Story:
         pass
 
+    @abstractmethod
     def save(self, story_id: str, story: Story) -> None:
         pass
 
-class FakeStoryRepository(StoryRepository):
-    repofile = os.path.expanduser("~/v2-chat-dump.json")
+class StoryLocked(Exception):
+    pass
+
+class FileStoryRepository(StoryRepository):
+    locklock = Lock()
+    locks = {}
+
+    def __init__(self, repo_dir: str):
+        self.repo_dir = repo_dir
+
+    def _repofile(self, story_id: str) -> str:
+        return os.path.join(self.repo_dir, f"story-{story_id}.json")
+
+    def lock(self, story_id: str) -> None:
+        with self.locklock:
+            if story_id in self.locks:
+                raise StoryLocked(f"Story {story_id} is locked by another process.")
+
+            self.locks[story_id] = True
+
+    def unlock(self, story_id: str) -> None:
+        with self.locklock:
+            del self.locks[story_id]
+
+    def story_exists(self, story_id: str) -> bool:
+        return os.path.exists(self._repofile(story_id))
+
     def load(self, story_id: str) -> Story:
-        with open(self.repofile) as f:
+        with open(self._repofile(story_id)) as f:
             return Story.model_validate_json(f.read())
 
     def save(self, story_id: str, story: Story) -> None:
-        with open(self.repofile, "w") as f:
+        with open(self._repofile(story_id), "w") as f:
             f.write(story.model_dump_json(indent=2))
 
 class Command[T]:
@@ -97,21 +138,10 @@ class StoryEngine:
         self.story_repository = story_repository
 
     def run_command(self, story_id: str, cmd: Command):
-        story = self.story_repository.load(story_id)
-        cmd.run(story)
-        self.story_repository.save(story_id, story)
-
-    def fix(self, message: str, instruction: str) -> str:        
-        response = self.chains.fix_chain.invoke({
-            "message": message.text(),
-            "instruction": instruction,
-        })
-
-        return response.content
-    
-    def make_chapter_summary(self, chapter_title: str, scenes: List[Scene]) -> Chapter:
-        scenes_block = "\n".join([f"## {scene.time_and_location}\n{scene.events}" for scene in scenes])
-        response = self.chains.chapter_chain.invoke({
-            "scenes": scenes_block
-        })
-        return Chapter(title=chapter_title, summary=response.content)
+        try:
+            self.story_repository.lock(story_id)
+            story = self.story_repository.load(story_id)
+            cmd.run(story)
+            self.story_repository.save(story_id, story)
+        finally:
+            self.story_repository.unlock(story_id)
