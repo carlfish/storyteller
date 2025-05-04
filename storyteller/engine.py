@@ -133,6 +133,15 @@ class Command[T]:
     def run(story: Story) -> T:
         pass
 
+class OutputSink(ABC):
+    @abstractmethod
+    def write_message(self, text: str) -> None:
+        pass
+
+    @abstractmethod
+    def start_(self, text: str) -> None:
+        pass
+
 class StoryEngine:
     def __init__(self, story_repository: StoryRepository):
         self.story_repository = story_repository

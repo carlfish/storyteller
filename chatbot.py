@@ -8,7 +8,6 @@ from storyteller.commands import *
 import os
 import logging
 
-# Load environment variables
 load_dotenv()
 
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
@@ -77,36 +76,43 @@ def main():
     if (len(preview_story.current_messages) > 0):
         print(f"Last message:\n\n{preview_story.current_messages[-1].content}\n\n")
 
+    stdout_sink = lambda x: print(x, end="", flush=True)
+
     print("Chatbot initialized. Type 'quit' to exit.")
     print("You can start chatting now!")
         
     while True:    
-        user_input = input("\nYou: ")
-        if user_input.lower() == 'quit':
-            break
-        elif user_input.lower() == "retry":
-            cmd = RetryCommand(chains, sink=lambda x: print(x, end="", flush=True))
-        elif user_input.lower() == "rewind":
-            cmd = RewindCommand(chains, sink=lambda x: print(x, end="", flush=True))
-        elif user_input.startswith("fix"):
-            instruction = re.sub("^fix:?", "", user_input).strip()
-            cmd = FixCommand(chains, sink=lambda x: print(x, end="", flush=True), instruction=instruction)
-        elif user_input.startswith("rewrite"):
-            text = re.sub("^rewrite:?", "", user_input).strip()
-            cmd = RewriteCommand(sink=lambda x: print(x, end="", flush=True), text=text)
-        elif user_input.startswith("chapter"):
-            title = re.sub("^chapter:?", "", user_input).strip()
-            cmd = CloseChapterCommand(chains, sink=lambda x: print(x, end="", flush=True), chapter_title=title)
-        else:
-            cmd = ChatCommand(chains, sink=lambda x: print(x, end="", flush=True), user_input=user_input)
-            
-        # summarize after running command so that we don't accidentally summarize something that
-        # needs replaying/rewriting.
         try:
-            engine.run_command(story_id, cmd)
-            engine.run_command(story_id, SummarizeCommand(chains, sink=lambda x: print(x, end="", flush=True), min_tokens=HISTORY_MIN_TOKENS, max_tokens=HISTORY_MAX_TOKENS))
-        except Exception as e:
-            print(f"Something went wrong: {e}")
+            user_input = input("\nYou: ")
+            if user_input.lower() == 'quit':
+                print("\nGoodbye!")
+                break
+            elif user_input.lower() == "retry":
+                cmd = RetryCommand(chains, sink=stdout_sink)
+            elif user_input.lower() == "rewind":
+                cmd = RewindCommand(chains, sink=stdout_sink)
+            elif user_input.startswith("fix"):
+                instruction = re.sub("^fix:?", "", user_input).strip()
+                cmd = FixCommand(chains, sink=stdout_sink, instruction=instruction)
+            elif user_input.startswith("rewrite"):
+                text = re.sub("^rewrite:?", "", user_input).strip()
+                cmd = RewriteCommand(sink=stdout_sink, text=text)
+            elif user_input.startswith("chapter"):
+                title = re.sub("^chapter:?", "", user_input).strip()
+                cmd = CloseChapterCommand(chains, sink=stdout_sink, chapter_title=title)
+            else:
+                cmd = ChatCommand(chains, sink=stdout_sink, user_input=user_input)
+                
+            # summarize after running command so that we don't accidentally summarize something that
+            # needs replaying/rewriting.
+            try:
+                engine.run_command(story_id, cmd)
+                engine.run_command(story_id, SummarizeCommand(chains, sink=lambda x: print(x, end="", flush=True), min_tokens=HISTORY_MIN_TOKENS, max_tokens=HISTORY_MAX_TOKENS))
+            except Exception as e:
+                print(f"Something went wrong: {e}")
+        except KeyboardInterrupt:
+            print("\nGoodbye!")
+            break
 
 if __name__ == "__main__":
     main()

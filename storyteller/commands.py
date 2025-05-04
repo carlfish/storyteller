@@ -187,3 +187,16 @@ class CloseChapterCommand(Command):
         SummarizeCommand(self.chains, self.sink, 0, 0).run(story)
         self.close_chapter(story)
         
+class GenerateCharactersCommand(Command):
+    def __init__(self, chains: Chains, sink: Callable[[str], None], prompt: str):
+        self.chains = chains
+        self.sink = sink
+        self.prompt = prompt
+
+    def make_characters(self, descriptions: str) -> List[Character]:
+        return self.chains.character_create_chain.invoke({"characters": descriptions}).characters
+
+    def run(self, story: Story):
+        characters = self.make_characters(self.prompt)
+        story.characters = characters
+        self.sink(f"Created {len(characters)} characters:\n\n{self.prompt}\n\n")
