@@ -1,17 +1,10 @@
-from typing import List, TypeVar
-from langchain_ollama import ChatOllama
-from langchain_core.language_models.base import BaseLanguageModel
-from langchain_core.messages import BaseMessage, AIMessage, AIMessageChunk, HumanMessage, trim_messages
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
-from langchain_core.messages.utils import count_tokens_approximately
+import re
+from typing import List
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
-from pydantic import BaseModel
 from storyteller.models import *
 from storyteller.engine import FakeStoryRepository, StoryEngine, Chains
-from storyteller.commands import ChatCommand
+from storyteller.commands import *
 import os
 import logging
 
@@ -19,21 +12,14 @@ import logging
 load_dotenv()
 
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+HISTORY_MIN_TOKENS = int(os.getenv("HISTORY_MIN_TOKENS", "750"))
+HISTORY_MAX_TOKENS = int(os.getenv("HISTORY_MAX_TOKENS", "1500"))
 
 logger = logging.getLogger(__name__)
 if DEBUG:
     logging.basicConfig(level=logging.DEBUG)
 else:
     logging.basicConfig(level=logging.WARN)
-
-
-HISTORY_MIN_TOKENS = int(os.getenv("HISTORY_MIN_TOKENS", "1024"))
-HISTORY_MAX_TOKENS = int(os.getenv("HISTORY_MAX_TOKENS", "4096"))
-MAX_RESPONSE_TOKENS = int(os.getenv("MAX_RESPONSE_TOKENS", "1024"))
-DUMPFILE_NAME = os.getenv("DUMPFILE_NAME", "~/last-chat-dump.json")
-
-USER_NAME = os.getenv("CHAT_USER_NAME", "")
-AI_NAME = os.getenv("CHAT_AI_NAME", "")
 
 def load_file(filename: str) -> str:
     with open(filename, "r") as f:
@@ -82,6 +68,7 @@ def main():
     engine = StoryEngine(story_repository=repo)
 
     preview_story = repo.load("blah")
+    story_id = "boing"
     if (len(preview_story.current_messages) > 0):
         print(f"Last message:\n\n{preview_story.current_messages[-1].content}\n\n")
 
@@ -92,9 +79,26 @@ def main():
         user_input = input("\nYou: ")
         if user_input.lower() == 'quit':
             break
+        elif user_input.lower() == "retry":
+            cmd = RetryCommand(chains, sink=lambda x: print(x, end="", flush=True))
+        elif user_input.lower() == "rewind":
+            cmd = RewindCommand(chains, sink=lambda x: print(x, end="", flush=True))
+        elif user_input.startswith("fix"):
+            instruction = re.sub("^fix:?", "", user_input).strip()
+            cmd = FixCommand(chains, sink=lambda x: print(x, end="", flush=True), instruction=instruction)
+        elif user_input.startswith("rewrite"):
+            text = re.sub("^rewrite:?", "", user_input).strip()
+            cmd = RewriteCommand(sink=lambda x: print(x, end="", flush=True), text=text)
+        elif user_input.startswith("chapter"):
+            title = re.sub("^chapter:?", "", user_input).strip()
+            cmd = CloseChapterCommand(chains, sink=lambda x: print(x, end="", flush=True), chapter_title=title)
         else:
             cmd = ChatCommand(chains, sink=lambda x: print(x, end="", flush=True), user_input=user_input)
-            engine.run_command("boing", cmd)
             
+        # summarize after running command so that we don't accidentally summarize something that
+        # needs replaying/rewriting.
+        engine.run_command(story_id, cmd)
+        engine.run_command(story_id, SummarizeCommand(chains, sink=lambda x: print(x, end="", flush=True), min_tokens=HISTORY_MIN_TOKENS, max_tokens=HISTORY_MAX_TOKENS))
+
 if __name__ == "__main__":
     main()

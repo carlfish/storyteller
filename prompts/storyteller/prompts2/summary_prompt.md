@@ -5,9 +5,9 @@ Use the following format
 - time_and_location - when and where the scene occurred
 - events - what happened in the scene.
 
-# STORY SO FAR (REMEBER TO INCLUDE THIS!)
+# STORY SO FAR (REMEBER TO INCLUDE THESE!)
 
-{previous_summary}
+{previous_scenes}
 
 # CONTINUED
 

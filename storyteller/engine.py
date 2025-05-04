@@ -55,8 +55,8 @@ class Chains:
         self.naked_chat_chain = make_chat_chain(model, prompts.base_prompt)
         self.summary_chain = make_structured_chain(model, prompts.scene_summary_prompt, Scenes)
         self.fix_chain = make_basic_chain(model, prompts.fix_prompt)
-        self.chapter_chain = make_basic_chain(model, prompts.chapter_summary_prompt)
-        self.character_bio_chain = make_basic_chain(model, prompts.character_summary_prompt)
+        self.chapter_chain = make_structured_chain(model, prompts.chapter_summary_prompt, Chapter)
+        self.character_bio_chain = make_structured_chain(model, prompts.character_summary_prompt, Characters)
         self.character_create_chain = make_structured_chain(model, prompts.character_creation_prompt, Characters)
 
     def chat_chain(self, story: Story):
