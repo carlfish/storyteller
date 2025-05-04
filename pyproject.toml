@@ -1,0 +1,20 @@
+[project]
+name = "chatbot"
+version = "0.1.0"
+description = "A chatbot using LangChain and Ollama"
+requires-python = ">=3.9"
+dependencies = [
+    "langchain>=0.3.23",
+    "langchain-ollama>=0.0.1",
+    "langchain-core>=0.1.0",
+    "python-dotenv>=1.1.0",
+    "langgraph>=0.3.31",
+    "pydantic>=2.11.3",
+    "langchain-openai>=0.3.14",
+    "langchain-anthropic>=0.3.12",
+    "langchain-xai>=0.2.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build" 
