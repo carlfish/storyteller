@@ -22,10 +22,10 @@ An advanced interactive storytelling chatbot that supports multiple LLM provider
 
 - Python 3.9+
 - [uv](https://github.com/astral-sh/uv) package manager
-- Access to one of the supported LLM providers:
-  - Anthropic (Claude)
-  - XAI (Grok)
-  - OpenAI (GPT-4)
+- API key for one of the supported LLM providers:
+  - OpenAI (GPT-4.1-mini by default)
+  - Anthropic (Claude 3.5 Haiku by default)
+  - XAI (Grok-3 by default)
 
 ## Setup
 
@@ -33,14 +33,23 @@ An advanced interactive storytelling chatbot that supports multiple LLM provider
    ```bash
    uv sync
    ```
-2. Configure environment variables (optional):
-   - `DEBUG`: Set to "true" for detailed logging
-   - `HISTORY_MIN_TOKENS`: Minimum tokens to keep in history (default: 750)
-   - `HISTORY_MAX_TOKENS`: Maximum tokens in history (default: 1500)
+2. Configure environment variables:
+   - Required API keys (at least one):
+     - `OPENAI_API_KEY`: Your OpenAI API key
+     - `ANTHROPIC_API_KEY`: Your Anthropic API key
+     - `XAI_API_KEY`: Your XAI API key
+   - Optional model configuration:
+     - `OPENAPI_MODEL`: OpenAI model name (default: "gpt-4.1-mini")
+     - `ANTHROPIC_MODEL`: Anthropic model name (default: "claude-3-5-haiku-latest")
+     - `XAI_MODEL`: XAI model name (default: "grok-3-latest")
+   - Other optional settings:
+     - `DEBUG`: Set to "true" for detailed logging
+     - `HISTORY_MIN_TOKENS`: Minimum tokens to keep in history (default: 1024)
+     - `HISTORY_MAX_TOKENS`: Maximum tokens in history (default: 4096)
 
 3. Run the chatbot:
    ```bash
-   uv run python chatbot2.py
+   uv run python chatbot.py
    ```
 
 ## Usage
@@ -59,7 +68,7 @@ An advanced interactive storytelling chatbot that supports multiple LLM provider
 
 ## Notes
 
-- The chatbot supports multiple LLM providers (Claude, Grok, GPT-4)
+- The chatbot will use the first available API key in the order: OpenAI, Anthropic, XAI
 - Stories are saved in a repository located at `~/story_repo`
 - The chatbot uses a sophisticated prompt system with separate prompts for different aspects of the story (base, summary, character management, etc.)
 - Token limits are configurable through environment variables to manage memory usage and response quality
