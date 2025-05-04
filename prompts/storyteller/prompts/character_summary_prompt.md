@@ -1,8 +1,10 @@
-Update the provided character bios from the information in the story, adding any new characters encountered. DO NOT remove any character from the summary.
+Update the provided character bios from the information in the story, adding any new characters encountered. DO NOT remove any character from the list.
 
-For each character, write a SHORT bio that includes their name, appearance, personality, role in the story, and important characteristics.
+Use the following format for each character.
 
-ONLY respond with the character bios, do not add commentary or explanation.
+- name: the character's name
+- role: the character's role in the story, examples of roles might be "David's manager", "Elven wizard", "Barman at the Pig & Whistle"
+- bio: the character's appearance, personality, and important characteristics.
 
 # Characters
 

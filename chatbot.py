@@ -49,7 +49,7 @@ def make_characters(chain, descriptions: str) -> List[Character]:
 
 
 def main():    
-    prompt_dir = "prompts/storyteller/prompts2"
+    prompt_dir = "prompts/storyteller/prompts"
     story_dir = "prompts/storyteller/stories/genfantasy"
 
     if os.getenv("OPENAI_API_KEY", None):

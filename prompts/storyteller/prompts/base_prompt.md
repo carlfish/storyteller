@@ -30,4 +30,4 @@ Write an exciting, evocative tale with a detailed, descriptive narrative.
 
 {chapters}
 
-{summary}
+{scenes}
