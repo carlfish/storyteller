@@ -113,7 +113,7 @@ def set_channel_story(channel_id: str, story_id: str) -> None:
 chargen_prompt = load_file(f"{INIT_STORY_DIR}/chargen.md")
 
 story_commands: dict[str, BotCommand] = {
-    "newstory": NewStoryCommand(set_channel_story, story_repository, chargen_prompt, chains), 
+    "newstory": NewStoryCommand(set_channel_story, story_repository, chargen_prompt), 
     "s": WriteStoryCommand(),
     "retry": RetryCommand(),
     "rewind": RewindCommand(),
@@ -125,7 +125,7 @@ story_commands: dict[str, BotCommand] = {
 story_commands["help"] = HelpCommand(story_commands)
 
 no_story_commands: dict[str, BotCommand] = {
-    "newstory": NewStoryCommand(set_channel_story, story_repository, chargen_prompt, chains),
+    "newstory": NewStoryCommand(set_channel_story, story_repository, chargen_prompt),
     "about": AboutCommand(model.model_name),
 }
 no_story_commands["help"] = HelpCommand(story_commands)
@@ -171,11 +171,11 @@ async def on_message(message):
             args = match.group(2).strip()
 
             if command in cmd_dict:
-                ctx = CommandContext(story_id, message, story_engine)
+                ctx = CommandContext(story_id, message, story_engine, chains)
                 await cmd_dict[command].execute(ctx, args)
                 await _run_summary(story_id, story_engine, chains, message.channel)
         elif cfg and cfg.yolo_mode:
-            ctx = CommandContext(story_id, message, story_engine)
+            ctx = CommandContext(story_id, message, story_engine, chains)
             await cmd_dict["s"].execute(ctx, content)
             await _run_summary(story_id, story_engine, chains, message.channel)
     except Exception as e:

@@ -1,23 +1,19 @@
 from abc import ABC, abstractmethod
 import discord
-from langchain.chat_models import init_chat_model
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
 import storyteller.commands
 import uuid
 import re
-import os
-import json
 from storyteller.models import *
-from threading import Lock
-from dotenv import load_dotenv
 from io import StringIO
 from textwrap import fill, dedent
 
 class CommandContext:
-    def __init__(self, story_id: str | None, message: discord.Message, story_engine: StoryEngine):
+    def __init__(self, story_id: str | None, message: discord.Message, story_engine: StoryEngine, chains: Chains):
         self.story_id = story_id
         self.message = message
         self.story_engine = story_engine
+        self.chains = chains
 
     async def send(self, content: str, file: discord.File | None = None) -> None:
         await self.message.channel.send(content, file=file)
@@ -45,11 +41,10 @@ class OutputCapturingSink:
 class NewStoryCommand(BotCommand):
     help_text = "- Start a new story, abandoning any story that might be in progress."
 
-    def __init__(self, set_channel_story: callable, story_repository: FileStoryRepository, chargen_prompt: str, chains: Chains):
+    def __init__(self, set_channel_story: callable, story_repository: FileStoryRepository, chargen_prompt: str):
         self.set_channel_story = set_channel_story
         self.story_repository = story_repository
         self.chargen_prompt = chargen_prompt
-        self.chains = chains
 
     def _character_bios(self, characters: list[Character]) -> str:
         return "\n\n".join(
@@ -65,14 +60,13 @@ class NewStoryCommand(BotCommand):
         new_story_id = str(uuid.uuid4())
         full_story_id = f"{channel_id}-{new_story_id}"
         self.story_repository.save(full_story_id, story)
-
         self.set_channel_story(channel_id, new_story_id)
 
         await ctx.send(dedent(f"""\
             📖 Starting a new story.
 
             First, let's create some heroes using a generic fantasy prompt. (This will be customizable later.)"""))
-        ctx.story_engine.run_command(full_story_id, storyteller.commands.GenerateCharactersCommand(self.chains, lambda x: None, re.sub(r'^', '> ', self.chargen_prompt, flags=re.MULTILINE)))
+        ctx.story_engine.run_command(full_story_id, storyteller.commands.GenerateCharactersCommand(ctx.chains, lambda x: None, re.sub(r'^', '> ', self.chargen_prompt, flags=re.MULTILINE)))
         generated_characters = self.story_repository.load(full_story_id).characters
         file = discord.File(fp=StringIO(self._character_bios(generated_characters)), filename="characters.md")
         await ctx.send(f"Created {len(generated_characters)} characters:\n{self._character_summaries(generated_characters)}", file=file)
@@ -82,7 +76,7 @@ class WriteStoryCommand(BotCommand):
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
         sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.ChatCommand(chains, sink, args))
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.ChatCommand(ctx.chains, sink, args))
         await ctx.send(sink.output)
 
 class RetryCommand(BotCommand):
@@ -90,7 +84,7 @@ class RetryCommand(BotCommand):
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
         sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RetryCommand(chains, sink))
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RetryCommand(ctx.chains, sink))
         await ctx.send(sink.output)
 
 class RewindCommand(BotCommand):
@@ -98,7 +92,7 @@ class RewindCommand(BotCommand):
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
         sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RewindCommand(chains, sink))
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RewindCommand(ctx.chains, sink))
         await ctx.send(sink.output)
 
 class FixCommand(BotCommand):
@@ -106,7 +100,7 @@ class FixCommand(BotCommand):
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
         sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.FixCommand(chains, sink, args))
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.FixCommand(ctx.chains, sink, args))
         await ctx.send(sink.output)
 
 class RewriteCommand(BotCommand):
@@ -122,7 +116,7 @@ class CloseChapterCommand(BotCommand):
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
         sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.CloseChapterCommand(chains, sink, args))
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.CloseChapterCommand(ctx.chains, sink, args))
         await ctx.send(sink.output)
 
 class HelpCommand(BotCommand):
