@@ -134,9 +134,7 @@ class NewStoryCommand(BotCommand):
         await message.channel.send(dedent(f"""\
             📖 Starting a new story.
 
-            First, let's create some heroes using a generic fantasy prompt. (This will be customizable later.)
-
-            {chargen_prompt}"""))
+            First, let's create some heroes using a generic fantasy prompt. (This will be customizable later.)"""))
         story_engine.run_command(full_story_id, storyteller.commands.GenerateCharactersCommand(chains, lambda x: None, chargen_prompt))
         generated_characters = self.story_repository.load(full_story_id).characters
         file = discord.File(fp=StringIO(self._character_bios(generated_characters)), filename="characters.md")
