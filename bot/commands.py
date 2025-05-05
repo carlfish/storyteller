@@ -230,3 +230,40 @@ class AboutCommand(BotCommand):
 
         await ctx.send_dm(about_text, suppress_embeds=True)
         await ctx.add_reaction("👍") 
+
+class YoloCommand(BotCommand):
+    help_text = "[on|off] - when yolo mode is on, all messages that are not ~ooc are treated as storyteller messages."
+
+    def __init__(self, set_channel_yolo: callable, get_channel_yolo: callable):
+        self.set_channel_yolo = set_channel_yolo
+        self.get_channel_yolo = get_channel_yolo
+
+    def _get_yolo_mode_msg(self, yolo_mode: bool) -> str:
+        if yolo_mode:
+            return f"Yolo mode is **on**. To write a message that is not part of the story, prefix it with ~ooc."
+        else:
+            return f"Yolo mode is **off**. To write a message that is part of the story, prefix it with ~s."
+
+    def _is_yolo_mode(self, ctx: CommandContext) -> bool:
+        return self.get_channel_yolo(str(ctx.message.channel.id))
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        arg = args.strip().lower()
+        if arg == "on" or arg == "true":
+            self.set_channel_yolo(str(ctx.message.channel.id), True)
+            message = f"❗ {self._get_yolo_mode_msg(True)}"
+        elif arg == "off" or arg == "false":
+            self.set_channel_yolo(str(ctx.message.channel.id), False)
+            message = f"❗ {self._get_yolo_mode_msg(False)}"
+        elif not arg:
+            message = f"❗ {self._get_yolo_mode_msg(self._is_yolo_mode(ctx))}"
+        else:
+            message = f"❗ Usage: ~yolo [on|off]. {self._get_yolo_mode_msg(self._is_yolo_mode(ctx))}"
+
+        await ctx.send(message)
+
+class OocCommand(BotCommand):
+    help_text = "[text] - write a message that will be ignored when yolo mode is on."
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        pass

@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 import discord
 from langchain.chat_models import init_chat_model
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
@@ -12,7 +11,7 @@ from dotenv import load_dotenv
 from bot.commands import (
     CommandContext, BotCommand, NewStoryCommand, WriteStoryCommand, RetryCommand,
     RewindCommand, RewriteCommand, CloseChapterCommand, HelpCommand,
-    AboutCommand, SummaryDiscordResponse
+    AboutCommand, SummaryDiscordResponse, YoloCommand, OocCommand
 )
 
 load_dotenv()
@@ -40,7 +39,7 @@ class ChannelConfig(BaseModel):
     def new(cls, story_id: str) -> "ChannelConfig":
         return cls(story_id=story_id, yolo_mode=False)
 
-    story_id: str
+    story_id: str | None
     yolo_mode: bool
 
 class ChannelConfigs(BaseModel):
@@ -104,8 +103,26 @@ chains = Chains(model, prompts)
 channel_configs = ChannelConfigRegistry(STORY_DIR)
 
 def set_channel_story(channel_id: str, story_id: str) -> None:
-    cfg = ChannelConfig.new(story_id)
+    cfg = channel_configs.get_config(channel_id)
+    if cfg is None:
+        cfg = ChannelConfig.new(story_id)
+    else:
+        cfg.story_id = story_id        
     channel_configs.save_config(channel_id, cfg)
+
+def set_channel_yolo(channel_id: str, yolo_mode: bool) -> None:
+    cfg = channel_configs.get_config(channel_id)
+    if cfg is None:
+        cfg = ChannelConfig.new(None)
+
+    cfg.yolo_mode = yolo_mode
+    channel_configs.save_config(channel_id, cfg)
+
+def get_channel_yolo(channel_id: str) -> bool:
+    cfg = channel_configs.get_config(channel_id)
+    if cfg is None:
+        return False
+    return cfg.yolo_mode
 
 chargen_prompt = load_file(f"{INIT_STORY_DIR}/chargen.md")
 
@@ -118,11 +135,14 @@ story_commands: dict[str, BotCommand] = {
     "rewrite": RewriteCommand(),
     "chapter": CloseChapterCommand(),
     "about": AboutCommand(model.model_name),
+    "yolo": YoloCommand(set_channel_yolo, get_channel_yolo),
+    "ooc": OocCommand(),
 }
 story_commands["help"] = HelpCommand(story_commands)
 
 no_story_commands: dict[str, BotCommand] = {
     "newstory": NewStoryCommand(set_channel_story, story_repository, chargen_prompt),
+    "yolo": YoloCommand(set_channel_yolo, get_channel_yolo),
     "about": AboutCommand(model.model_name),
 }
 no_story_commands["help"] = HelpCommand(story_commands)
