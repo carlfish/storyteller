@@ -17,6 +17,16 @@ class Scene(BaseModel):
 
 class Story(BaseModel):
     @classmethod
+    def new(cls) -> "Story":
+        return cls(
+            characters=[],
+            chapters=[],
+            scenes=[],
+            old_messages=[],
+            current_messages=[]
+        )
+    
+    @classmethod
     def to_lc_message(cls, data):
         if data["type"] == "HumanMessage" or data["type"] == "human":
             return HumanMessage(data["content"])

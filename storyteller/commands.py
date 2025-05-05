@@ -154,7 +154,6 @@ class SummarizeCommand(Command):
         return response.characters
 
     def run(self, story: Story):
-        self.sink(f"[Processing {count_tokens_approximately(story.current_messages)} tokens.]\n")
         if (count_tokens_approximately(story.current_messages) > self.max_tokens):
             pruned_messages, remaining_messages = self.trim(story.current_messages)
             story.current_messages = remaining_messages

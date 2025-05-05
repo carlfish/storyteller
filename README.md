@@ -52,6 +52,48 @@ An advanced interactive storytelling chatbot that supports multiple LLM provider
    uv run python chatbot.py
    ```
 
+## Discord Bot Setup
+
+1. Create a Discord application and bot:
+   - Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+   - Create a new application
+   - Go to the "Bot" section and create a bot
+   - Copy the bot token
+
+2. Add the Discord bot token to your environment variables:
+   ```
+   DISCORD_TOKEN=your_bot_token_here
+   ```
+
+3. Invite the bot to your server:
+   - Go to OAuth2 > URL Generator in your Discord application
+   - Select the "bot" scope
+   - Select the following permissions:
+     - Read Messages/View Channels
+     - Send Messages
+     - Read Message History
+   - Use the generated URL to invite the bot to your server
+
+4. Run the Discord bot:
+   ```bash
+   uv run python discordbot.py
+   ```
+
+## Discord Bot Commands
+
+The Discord bot supports the following commands:
+
+- `~newstory` - Start a new story, abandoning any story in progress
+- `~s [text]` - Write the next section of the story
+- `~retry` - Regenerate the last storyteller response
+- `~rewind` - Remove the last user message and storyteller response
+- `~rewrite [text]` - Replace the last storyteller response with provided text
+- `~chapter [title]` - Close the current chapter
+- `~help` - Show available commands
+- `~about` - Show information about the bot
+
+Each Discord channel can have its own story, and stories are automatically saved and can be continued later.
+
 ## Usage
 
 - Start a conversation by typing your message
