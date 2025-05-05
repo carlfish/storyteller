@@ -1,6 +1,6 @@
-# LangChain Storyteller Chatbot
+# Storyteller Chatbot
 
-An advanced interactive storytelling chatbot that supports multiple LLM providers and features a rich command system for story management.
+An interactive storytelling chatbot that supports multiple LLM providers and tries its best to minimize clutter in the context window.
 
 ## Features
 
@@ -9,14 +9,8 @@ An advanced interactive storytelling chatbot that supports multiple LLM provider
 - Character tracking and development
 - Automatic conversation summarization
 - Message history management with token limits
-- Debug mode for detailed logging
 - Story repository for saving and loading stories
-- Rich command system:
-  - `retry`: Retry the last interaction
-  - `rewind`: Rewind the conversation
-  - `fix [instruction]`: Fix the last message with specific instructions
-  - `rewrite [text]`: Rewrite specific text
-  - `chapter [title]`: Close the current chapter and start a new one
+
 
 ## Prerequisites
 
@@ -27,7 +21,7 @@ An advanced interactive storytelling chatbot that supports multiple LLM provider
   - Anthropic (Claude 3.5 Haiku by default)
   - XAI (Grok-3 by default)
 
-## Setup
+## Interactive CLI Setup
 
 1. Install dependencies using uv:
    ```bash
@@ -44,13 +38,26 @@ An advanced interactive storytelling chatbot that supports multiple LLM provider
      - `XAI_MODEL`: XAI model name (default: "grok-3-latest")
    - Other optional settings:
      - `DEBUG`: Set to "true" for detailed logging
-     - `HISTORY_MIN_TOKENS`: Minimum tokens to keep in history (default: 1024)
-     - `HISTORY_MAX_TOKENS`: Maximum tokens in history (default: 4096)
+     - `HISTORY_MAX_TOKENS`: Maximum tokens in chat history before automatically summarizing (default: 4096)
+     - `HISTORY_MIN_TOKENS`: Tokens to retain in chat history after automatically summarizing (default: 1024)
 
 3. Run the chatbot:
    ```bash
    uv run python chatbot.py
    ```
+
+### Usage
+
+- Start and continue the story by typing your message
+- Type 'quit' to exit the chatbot
+- Use special commands to manage the story:
+  - `retry` to retry the last interaction
+  - `rewind` to go back in the conversation
+  - `fix [instructions]` to fix the last message
+  - `rewrite [text]` to rewrite specific text
+  - `chapter [title]` to start a new chapter
+- Stories are automatically saved to the repository for later continuation
+
 
 ## Discord Bot Setup
 
@@ -79,7 +86,7 @@ An advanced interactive storytelling chatbot that supports multiple LLM provider
    uv run python discordbot.py
    ```
 
-## Discord Bot Commands
+### Discord Bot Commands
 
 The Discord bot supports the following commands:
 
@@ -93,20 +100,6 @@ The Discord bot supports the following commands:
 - `~about` - Show information about the bot
 
 Each Discord channel can have its own story, and stories are automatically saved and can be continued later.
-
-## Usage
-
-- Start a conversation by typing your message
-- Type 'quit' to exit the chatbot
-- Use special commands to manage the story:
-  - `retry` to retry the last interaction
-  - `rewind` to go back in the conversation
-  - `fix [instructions]` to fix the last message
-  - `rewrite [text]` to rewrite specific text
-  - `chapter [title]` to start a new chapter
-- The chatbot maintains conversation memory and can reference previous interactions
-- Story elements (characters, chapters, scenes) are automatically tracked and managed
-- Stories are automatically saved to the repository for later continuation
 
 ## Notes
 

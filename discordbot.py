@@ -301,7 +301,7 @@ async def on_message(message):
             if command in cmd_dict:
                 await cmd_dict[command].execute(story_id, message, args)
                 await _run_summary(story_id, message)
-        elif cfg.yolo_mode:
+        elif cfg and cfg.yolo_mode:
             await cmd_dict["s"].execute(story_id, message, content)
             await _run_summary(story_id, message.channel)
     except Exception as e:
