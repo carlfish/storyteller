@@ -17,7 +17,7 @@ class Scene(BaseModel):
 
 class Story(BaseModel):
     @classmethod
-    def new(cls) -> "Story":
+    def new(cls):
         return cls(
             characters=[],
             chapters=[],

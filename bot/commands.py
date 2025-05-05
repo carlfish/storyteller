@@ -1,0 +1,166 @@
+from abc import ABC, abstractmethod
+import discord
+from langchain.chat_models import init_chat_model
+from storyteller.engine import FileStoryRepository, StoryEngine, Chains
+import storyteller.commands
+import uuid
+import re
+import os
+import json
+from storyteller.models import *
+from threading import Lock
+from dotenv import load_dotenv
+from io import StringIO
+from textwrap import fill, dedent
+
+class CommandContext:
+    def __init__(self, story_id: str | None, message: discord.Message, story_engine: StoryEngine):
+        self.story_id = story_id
+        self.message = message
+        self.story_engine = story_engine
+
+    async def send(self, content: str, file: discord.File | None = None) -> None:
+        await self.message.channel.send(content, file=file)
+
+    async def send_dm(self, content: str, file: discord.File | None = None) -> None:
+        await self.message.author.send(content, file=file)
+
+    async def add_reaction(self, emoji: str) -> None:
+        await self.message.add_reaction(emoji)
+
+class BotCommand(ABC):
+    help_text: str
+
+    @abstractmethod
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        pass
+
+class OutputCapturingSink:
+    def __init__(self):
+        self.output = ""
+
+    def __call__(self, message: str) -> None:
+        self.output += message
+
+class NewStoryCommand(BotCommand):
+    help_text = "- Start a new story, abandoning any story that might be in progress."
+
+    def __init__(self, set_channel_story: callable, story_repository: FileStoryRepository, chargen_prompt: str, chains: Chains):
+        self.set_channel_story = set_channel_story
+        self.story_repository = story_repository
+        self.chargen_prompt = chargen_prompt
+        self.chains = chains
+
+    def _character_bios(self, characters: list[Character]) -> str:
+        return "\n\n".join(
+            [f"## {character.name} ({character.role})\n{fill(character.bio, width=80)}" for character in characters], 
+        )
+
+    def _character_summaries(self, characters: list[Character]) -> str:
+        return "\n".join([f"- {character.name} ({character.role})" for character in characters])
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        story = Story.new()
+        channel_id = str(ctx.message.channel.id)
+        new_story_id = str(uuid.uuid4())
+        full_story_id = f"{channel_id}-{new_story_id}"
+        self.story_repository.save(full_story_id, story)
+
+        self.set_channel_story(channel_id, new_story_id)
+
+        await ctx.send(dedent(f"""\
+            📖 Starting a new story.
+
+            First, let's create some heroes using a generic fantasy prompt. (This will be customizable later.)"""))
+        ctx.story_engine.run_command(full_story_id, storyteller.commands.GenerateCharactersCommand(self.chains, lambda x: None, re.sub(r'^', '> ', self.chargen_prompt, flags=re.MULTILINE)))
+        generated_characters = self.story_repository.load(full_story_id).characters
+        file = discord.File(fp=StringIO(self._character_bios(generated_characters)), filename="characters.md")
+        await ctx.send(f"Created {len(generated_characters)} characters:\n{self._character_summaries(generated_characters)}", file=file)
+
+class WriteStoryCommand(BotCommand):
+    help_text = "[text] - write the next section of the story, and the storyteller will continue from there."
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        sink = OutputCapturingSink()
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.ChatCommand(chains, sink, args))
+        await ctx.send(sink.output)
+
+class RetryCommand(BotCommand):
+    help_text = "- regenerate the last storyteller response, in case you didn't like it."
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        sink = OutputCapturingSink()
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RetryCommand(chains, sink))
+        await ctx.send(sink.output)
+
+class RewindCommand(BotCommand):
+    help_text = "- rewind the story, removing the last user message and the storyteller response."
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        sink = OutputCapturingSink()
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RewindCommand(chains, sink))
+        await ctx.send(sink.output)
+
+class FixCommand(BotCommand):
+    help_text = "- Do not use this command."
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        sink = OutputCapturingSink()
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.FixCommand(chains, sink, args))
+        await ctx.send(sink.output)
+
+class RewriteCommand(BotCommand):
+    help_text = "[text] - replace the last storyteller response with the provided text."
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        sink = OutputCapturingSink()
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RewriteCommand(sink, args))
+        await ctx.send(sink.output)
+
+class CloseChapterCommand(BotCommand):
+    help_text = "[title] - close the current chapter."
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        sink = OutputCapturingSink()
+        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.CloseChapterCommand(chains, sink, args))
+        await ctx.send(sink.output)
+
+class HelpCommand(BotCommand):
+    help_text = "- show this help."
+
+    def __init__(self, cmd_dict: dict[str, BotCommand]) -> None:
+        self.cmd_dict = cmd_dict
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        help_text = "Commands:\n" + "\n".join([f"**~{cmd}** {self.cmd_dict[cmd].help_text}" for cmd in self.cmd_dict])
+        await ctx.send_dm(help_text)
+        await ctx.add_reaction("👍")
+
+class AboutCommand(BotCommand):
+    help_text = "- About me, link to source, and caveats/disclaimers."
+
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        about_text = dedent(f"""\
+            # 📖 Storyteller bot
+                            
+            Collaborate with me to write stories! Currently I only support generic fantasy stories, think the old Dragonlance or early Forgotten Realms novels.
+
+            Currently using: {self.model_name}
+
+            Source code is available under the BSD license at https://github.com/carlfish/storyteller
+                            
+            ## Caveats and Disclaimers:
+                            
+            - I'm not very good at writing.
+            - Try to close chapters when it makes sense, it cleans my memory of unnecessary details.
+            - No effort was made to prevent prompt injection, so please… don't do that?
+            - I do my best to keep things PG, but see previous point.
+            - If I can write at all, it's because the billionaire backers of AI companies have funded  models trained on a massive corpus of stories and books, most not in the public domain, for their own profit, without compensating or crediting the authors in any way.
+            - If you have enjoyed playing with this bot, **BUY A BOOK**.
+        """)
+
+        await ctx.send_dm(about_text, suppress_embeds=True)
+        await ctx.add_reaction("👍") 
