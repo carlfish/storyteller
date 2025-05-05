@@ -8,6 +8,81 @@ from storyteller.models import *
 from io import StringIO
 from textwrap import fill, dedent
 
+class NoOpResponse(storyteller.commands.Response):
+    async def send_message(self, content: str, file: discord.File | None = None) -> None:
+        pass
+
+    async def start_stream(self) -> None:
+        pass
+
+    async def append(self, content: str) -> None:
+        pass
+
+    async def end_stream(self) -> None:
+        pass
+    
+class DiscordResponse(storyteller.commands.Response):
+    @classmethod
+    def to_channel(cls, message: discord.Message) -> "DiscordResponse":
+        return cls(message.channel)
+    
+    @classmethod
+    def to_user(cls, message: discord.Message) -> "DiscordResponse":
+        return cls(message.author)
+
+    def __init__(self, channel: discord.TextChannel):
+        self.channel = channel
+        self.stream_message: discord.Message | None = None
+        self.stream_content = ""
+        self.last_update_time = 0  # Track last update time
+
+    async def send_message(self, content: str, file: discord.File | None = None) -> None:
+        await self.channel.send(content, file=file)
+
+    async def start_stream(self) -> None:
+        self.stream_message = await self.channel.send("⌛ Thinking...")
+        self.stream_content = ""
+        self.last_update_time = discord.utils.utcnow().timestamp()
+
+    async def append(self, content: str) -> None:
+        if self.stream_message is None:
+            return
+        self.stream_content += content
+        
+        # Only update if 5 seconds have passed since last update
+        current_time = discord.utils.utcnow().timestamp()
+        if current_time - self.last_update_time >= 5:
+            await self.stream_message.edit(content=self.stream_content)
+            self.last_update_time = current_time
+
+    async def end_stream(self) -> None:
+        if self.stream_message is None:
+            return
+        await self.stream_message.delete()
+        await self.channel.send(self.stream_content)
+        self.stream_content = ""
+        self.last_update_time = 0
+
+class SummaryDiscordResponse(storyteller.commands.Response):
+    def __init__(self, channel: discord.TextChannel):
+        self.channel = channel
+        self.message: discord.Message | None = None
+
+    async def send_message(self, content: str, file: discord.File | None = None) -> None:
+        if self.message is None:
+            self.message = await self.channel.send(content)
+        else:
+            await self.message.edit(content=content)
+
+    async def start_stream(self) -> None:
+        raise storyteller.commands.CommandError("Unexpected streaming response from summary command.")
+
+    async def append(self, content: str) -> None:
+        raise storyteller.commands.CommandError("Unexpected streaming response from summary command.")
+
+    async def end_stream(self) -> None:
+        raise storyteller.commands.CommandError("Unexpected streaming response from summary command.")
+
 class CommandContext:
     def __init__(self, story_id: str | None, message: discord.Message, story_engine: StoryEngine, chains: Chains):
         self.story_id = story_id
@@ -66,7 +141,8 @@ class NewStoryCommand(BotCommand):
             📖 Starting a new story.
 
             First, let's create some heroes using a generic fantasy prompt. (This will be customizable later.)"""))
-        ctx.story_engine.run_command(full_story_id, storyteller.commands.GenerateCharactersCommand(ctx.chains, lambda x: None, re.sub(r'^', '> ', self.chargen_prompt, flags=re.MULTILINE)))
+        
+        await ctx.story_engine.run_command(full_story_id, storyteller.commands.GenerateCharactersCommand(ctx.chains, NoOpResponse(), self.chargen_prompt))
         generated_characters = self.story_repository.load(full_story_id).characters
         file = discord.File(fp=StringIO(self._character_bios(generated_characters)), filename="characters.md")
         await ctx.send(f"Created {len(generated_characters)} characters:\n{self._character_summaries(generated_characters)}", file=file)
@@ -75,49 +151,45 @@ class WriteStoryCommand(BotCommand):
     help_text = "[text] - write the next section of the story, and the storyteller will continue from there."
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
-        sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.ChatCommand(ctx.chains, sink, args))
-        await ctx.send(sink.output)
+        response = DiscordResponse.to_channel(ctx.message)
+        await ctx.story_engine.run_command(ctx.story_id, storyteller.commands.ChatCommand(ctx.chains, response, args))
 
 class RetryCommand(BotCommand):
     help_text = "- regenerate the last storyteller response, in case you didn't like it."
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
-        sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RetryCommand(ctx.chains, sink))
-        await ctx.send(sink.output)
+        response = DiscordResponse.to_channel(ctx.message)
+        await ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RetryCommand(ctx.chains, response))
 
 class RewindCommand(BotCommand):
     help_text = "- rewind the story, removing the last user message and the storyteller response."
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
-        sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RewindCommand(ctx.chains, sink))
-        await ctx.send(sink.output)
+        response = DiscordResponse.to_channel(ctx.message)
+        await ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RewindCommand(ctx.chains, response))
 
 class FixCommand(BotCommand):
     help_text = "- Do not use this command."
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
-        sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.FixCommand(ctx.chains, sink, args))
-        await ctx.send(sink.output)
+        response = DiscordResponse.to_channel(ctx.message)
+        await ctx.story_engine.run_command(ctx.story_id, storyteller.commands.FixCommand(ctx.chains, response, args))
 
 class RewriteCommand(BotCommand):
     help_text = "[text] - replace the last storyteller response with the provided text."
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
-        sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RewriteCommand(sink, args))
-        await ctx.send(sink.output)
+        response = DiscordResponse.to_channel(ctx.message)
+        await ctx.story_engine.run_command(ctx.story_id, storyteller.commands.RewriteCommand(response, args))
 
 class CloseChapterCommand(BotCommand):
     help_text = "[title] - close the current chapter."
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
-        sink = OutputCapturingSink()
-        ctx.story_engine.run_command(ctx.story_id, storyteller.commands.CloseChapterCommand(ctx.chains, sink, args))
-        await ctx.send(sink.output)
+        # Send summary and chapter responses in different messages.
+        summary_response = SummaryDiscordResponse(ctx.message.channel)
+        chapter_response = SummaryDiscordResponse(ctx.message.channel)
+        await ctx.story_engine.run_command(ctx.story_id, storyteller.commands.CloseChapterCommand(ctx.chains, summary_response, chapter_response, args))
 
 class HelpCommand(BotCommand):
     help_text = "- show this help."

@@ -146,11 +146,11 @@ class StoryEngine:
     def __init__(self, story_repository: StoryRepository):
         self.story_repository = story_repository
 
-    def run_command(self, story_id: str, cmd: Command):
+    async def run_command(self, story_id: str, cmd: Command):
         try:
             self.story_repository.lock(story_id)
             story = self.story_repository.load(story_id)
-            cmd.run(story)
+            await cmd.run(story)
             self.story_repository.save(story_id, story)
         finally:
             self.story_repository.unlock(story_id)

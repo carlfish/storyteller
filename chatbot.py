@@ -7,7 +7,7 @@ from storyteller.engine import FileStoryRepository, StoryEngine, Chains
 from storyteller.commands import *
 import os
 import logging
-
+import asyncio
 load_dotenv()
 
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
@@ -46,6 +46,18 @@ def init_context(prompt_dir: str):
 def make_characters(chain, descriptions: str) -> List[Character]:
     return chain.invoke({"characters": descriptions}).characters
 
+class StdoutResponse(Response):
+    async def send_message(self, msg: str):
+        print(msg)
+
+    async def start_stream(self):
+        pass
+
+    async def end_stream(self):
+        print()
+
+    async def append(self, msg: str):
+        print(msg, end="", flush=True)
 
 def main():    
     prompt_dir = "prompts/storyteller/prompts"
@@ -55,7 +67,7 @@ def main():
         model = init_chat_model(model=os.getenv("OPENAPI_MODEL", "gpt-4.1-mini"), model_provider="openai")
     elif os.getenv("ANTHROPIC_API_KEY", None):
         model = init_chat_model(model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"), model_provider="anthropic")
-    elif os.getenv("XAI_API_KEY", None):
+    if os.getenv("XAI_API_KEY", None):
         model = init_chat_model(model=os.getenv("XAI_MODEL", "grok-3-latest"), model_provider="xai")
     else:
         raise ValueError("No API key found")
@@ -64,19 +76,19 @@ def main():
     chains = Chains(model=model, prompts=context.prompts)
     repo = FileStoryRepository(repo_dir=os.path.expanduser("~/story_repo"))
 
-    if not repo.story_exists("blah"):
+    if not repo.story_exists("floop"):
         init_chars = load_file(f"{story_dir}/chargen.md")
         context.story.characters = make_characters(chains.character_create_chain, descriptions=init_chars)
-        repo.save("blah", context.story)
+        repo.save("floop", context.story)
 
     engine = StoryEngine(story_repository=repo)
 
-    preview_story = repo.load("blah")
-    story_id = "boing"
+    preview_story = repo.load("floop")
+    story_id = "floop"
     if (len(preview_story.current_messages) > 0):
         print(f"Last message:\n\n{preview_story.current_messages[-1].content}\n\n")
 
-    stdout_sink = lambda x: print(x, end="", flush=True)
+    response = StdoutResponse()
 
     print("Chatbot initialized. Type 'quit' to exit.")
     print("You can start chatting now!")
@@ -84,30 +96,31 @@ def main():
     while True:    
         try:
             user_input = input("\nYou: ")
+            print()
             if user_input.lower() == 'quit':
                 print("\nGoodbye!")
                 break
             elif user_input.lower() == "retry":
-                cmd = RetryCommand(chains, sink=stdout_sink)
+                cmd = RetryCommand(chains, response=response)
             elif user_input.lower() == "rewind":
-                cmd = RewindCommand(chains, sink=stdout_sink)
+                cmd = RewindCommand(chains, response=response)
             elif user_input.startswith("fix"):
                 instruction = re.sub("^fix:?", "", user_input).strip()
-                cmd = FixCommand(chains, sink=stdout_sink, instruction=instruction)
+                cmd = FixCommand(chains, response=response, instruction=instruction)
             elif user_input.startswith("rewrite"):
                 text = re.sub("^rewrite:?", "", user_input).strip()
-                cmd = RewriteCommand(sink=stdout_sink, text=text)
+                cmd = RewriteCommand(response=response, text=text)
             elif user_input.startswith("chapter"):
                 title = re.sub("^chapter:?", "", user_input).strip()
-                cmd = CloseChapterCommand(chains, sink=stdout_sink, chapter_title=title)
+                cmd = CloseChapterCommand(chains, response=response, chapter_title=title)
             else:
-                cmd = ChatCommand(chains, sink=stdout_sink, user_input=user_input)
+                cmd = ChatCommand(chains, response=response, user_input=user_input)
                 
             # summarize after running command so that we don't accidentally summarize something that
             # needs replaying/rewriting.
             try:
-                engine.run_command(story_id, cmd)
-                engine.run_command(story_id, SummarizeCommand(chains, sink=lambda x: print(x, end="", flush=True), min_tokens=HISTORY_MIN_TOKENS, max_tokens=HISTORY_MAX_TOKENS))
+                asyncio.run(engine.run_command(story_id, cmd))
+                asyncio.run(engine.run_command(story_id, SummarizeCommand(chains, response=response, min_tokens=HISTORY_MIN_TOKENS, max_tokens=HISTORY_MAX_TOKENS)))
             except Exception as e:
                 print(f"Something went wrong: {e}")
         except KeyboardInterrupt:

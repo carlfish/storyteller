@@ -15,7 +15,7 @@ from textwrap import fill, dedent
 from bot.commands import (
     CommandContext, BotCommand, NewStoryCommand, WriteStoryCommand, RetryCommand,
     RewindCommand, RewriteCommand, CloseChapterCommand, HelpCommand,
-    AboutCommand, OutputCapturingSink
+    AboutCommand, SummaryDiscordResponse
 )
 
 load_dotenv()
@@ -137,10 +137,8 @@ dm_commands["help"] = HelpCommand(story_commands)
 
 async def _run_summary(story_id: str | None, story_engine: StoryEngine, chains: Chains, channel: discord.TextChannel) -> None:
     if story_id:
-        summary_sink = OutputCapturingSink()
-        story_engine.run_command(story_id, storyteller.commands.SummarizeCommand(chains, summary_sink, HISTORY_MIN_TOKENS, HISTORY_MAX_TOKENS))
-        if summary_sink.output:
-            await channel.send(summary_sink.output)
+        response = SummaryDiscordResponse(channel)
+        await story_engine.run_command(story_id, storyteller.commands.SummarizeCommand(chains, response, HISTORY_MIN_TOKENS, HISTORY_MAX_TOKENS))
 
 @client.event
 async def on_message(message):
