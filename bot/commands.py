@@ -228,7 +228,7 @@ class AboutCommand(BotCommand):
             - If you have enjoyed playing with this bot, **BUY A BOOK**.
         """)
 
-        await ctx.send_dm(about_text, suppress_embeds=True)
+        await ctx.message.author.send(about_text, suppress_embeds=True)
         await ctx.add_reaction("👍") 
 
 class YoloCommand(BotCommand):
