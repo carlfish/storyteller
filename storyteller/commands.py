@@ -48,7 +48,7 @@ class ChatCommand(Command[None]):
         chat_chain = self.chains.chat_chain(story)
         await self.response.start_stream()
 
-        for chunk in chat_chain.stream({
+        async for chunk in chat_chain.astream({
             "input": self.user_input, 
             "characters": story.characters, 
             "scenes": f"## Chapter {len(story.chapters) + 1}\n\n {self._make_scenes(story.scenes)}",
@@ -99,7 +99,7 @@ class FixCommand(Command):
         fixed = ""
         await self.response.start_stream()
 
-        for chunk in self.chains.fix_chain.stream({
+        async for chunk in self.chains.fix_chain.astream({
             "message": message.text(),
             "instruction": instruction,
         }):
@@ -152,7 +152,7 @@ class SummarizeCommand(Command):
         scene_dump = "\n\n".join([f"## {scene.time_and_location}\n{scene.events}" for scene in old_scenes])
         message_dump = "\n\n".join([message.text() for message in messages])
 
-        response: Scenes = self.chains.summary_chain.invoke({
+        response: Scenes = await self.chains.summary_chain.ainvoke({
             "previous_scenes": scene_dump,
             "message_dump": message_dump
         })
@@ -165,7 +165,7 @@ class SummarizeCommand(Command):
         character_dump = "\n\n".join([f"## {character.name} ({character.role})\n{character.bio}" for character in old_characters])
         message_dump = "\n\n".join([message.text() for message in messages])
 
-        response: Characters = self.chains.character_bio_chain.invoke({
+        response: Characters = await self.chains.character_bio_chain.ainvoke({
             "characters": character_dump,
             "story": message_dump
         })
@@ -194,7 +194,7 @@ class CloseChapterCommand(Command):
         await self.chapter_response.send_message(f"⏳ Closing chapter {len(story.chapters)}…")
         scene_dump = "\n\n".join([f"## {scene.time_and_location}\n{scene.events}" for scene in story.scenes])
 
-        response: Chapter = self.chains.chapter_chain.invoke({
+        response: Chapter = await self.chains.chapter_chain.ainvoke({
             "scenes": scene_dump,
         })
 
@@ -215,10 +215,11 @@ class GenerateCharactersCommand(Command):
         self.response = response
         self.prompt = prompt
 
-    def make_characters(self, descriptions: str) -> List[Character]:
-        return self.chains.character_create_chain.invoke({"characters": descriptions}).characters
+    async def make_characters(self, descriptions: str) -> List[Character]:
+        response: Characters = await self.chains.character_create_chain.ainvoke({"characters": descriptions})
+        return response.characters
 
     async def run(self, story: Story):
-        characters = self.make_characters(self.prompt)
+        characters = await self.make_characters(self.prompt)
         story.characters = characters
         await self.response.send_message(f"Created {len(characters)} characters:\n\n{self.prompt}")

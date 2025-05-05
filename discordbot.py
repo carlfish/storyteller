@@ -3,15 +3,12 @@ import discord
 from langchain.chat_models import init_chat_model
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
 import storyteller.commands
-import uuid
 import re
 import os
 import json
 from storyteller.models import *
 from threading import Lock
 from dotenv import load_dotenv
-from io import StringIO
-from textwrap import fill, dedent
 from bot.commands import (
     CommandContext, BotCommand, NewStoryCommand, WriteStoryCommand, RetryCommand,
     RewindCommand, RewriteCommand, CloseChapterCommand, HelpCommand,
