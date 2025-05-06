@@ -8,11 +8,7 @@ import json
 from storyteller.models import *
 from threading import Lock
 from dotenv import load_dotenv
-from bot.commands import (
-    CommandContext, BotCommand, NewStoryCommand, WriteStoryCommand, RetryCommand,
-    RewindCommand, RewriteCommand, CloseChapterCommand, HelpCommand,
-    AboutCommand, SummaryDiscordResponse, YoloCommand, OocCommand
-)
+import bot.commands as bot_commands
 
 load_dotenv()
 
@@ -126,35 +122,36 @@ def get_channel_yolo(channel_id: str) -> bool:
 
 chargen_prompt = load_file(f"{INIT_STORY_DIR}/chargen.md")
 
-story_commands: dict[str, BotCommand] = {
-    "newstory": NewStoryCommand(set_channel_story, story_repository, chargen_prompt), 
-    "s": WriteStoryCommand(),
-    "retry": RetryCommand(),
-    "rewind": RewindCommand(),
+story_commands: dict[str, bot_commands.BotCommand] = {
+    "newstory": bot_commands.NewStoryCommand(set_channel_story, story_repository, chargen_prompt), 
+    "s": bot_commands.WriteStoryCommand(),
+    "retry": bot_commands.RetryCommand(),
+    "rewind": bot_commands.RewindCommand(),
     # "fix": FixCommand(), -- Fix doesn't work well enough.
-    "rewrite": RewriteCommand(),
-    "chapter": CloseChapterCommand(),
-    "about": AboutCommand(model.model_name),
-    "yolo": YoloCommand(set_channel_yolo, get_channel_yolo),
-    "ooc": OocCommand(),
+    "rewrite": bot_commands.RewriteCommand(),
+    "chapter": bot_commands.CloseChapterCommand(),
+    "about": bot_commands.AboutCommand(model.model_name),
+    "yolo": bot_commands.YoloCommand(set_channel_yolo, get_channel_yolo),
+    "ooc": bot_commands.OocCommand(),
+    "dump": bot_commands.DumpStoryCommand(story_repository),
 }
-story_commands["help"] = HelpCommand(story_commands)
+story_commands["help"] = bot_commands.HelpCommand(story_commands)
 
-no_story_commands: dict[str, BotCommand] = {
-    "newstory": NewStoryCommand(set_channel_story, story_repository, chargen_prompt),
-    "yolo": YoloCommand(set_channel_yolo, get_channel_yolo),
-    "about": AboutCommand(model.model_name),
+no_story_commands: dict[str, bot_commands.BotCommand] = {
+    "newstory": bot_commands.NewStoryCommand(set_channel_story, story_repository, chargen_prompt),
+    "yolo": bot_commands.YoloCommand(set_channel_yolo, get_channel_yolo),
+    "about": bot_commands.AboutCommand(model.model_name),
 }
-no_story_commands["help"] = HelpCommand(story_commands)
+no_story_commands["help"] = bot_commands.HelpCommand(story_commands)
 
-dm_commands: dict[str, BotCommand] = {
-    "about": AboutCommand(model.model_name),
+dm_commands: dict[str, bot_commands.BotCommand] = {
+    "about": bot_commands.AboutCommand(model.model_name),
 }
-dm_commands["help"] = HelpCommand(story_commands)
+dm_commands["help"] = bot_commands.HelpCommand(story_commands)
 
 async def _run_summary(story_id: str | None, story_engine: StoryEngine, chains: Chains, channel: discord.TextChannel) -> None:
     if story_id:
-        response = SummaryDiscordResponse(channel)
+        response = bot_commands.SummaryDiscordResponse(channel)
         await story_engine.run_command(story_id, storyteller.commands.SummarizeCommand(chains, response, HISTORY_MIN_TOKENS, HISTORY_MAX_TOKENS))
 
 @client.event
@@ -186,11 +183,11 @@ async def on_message(message):
             args = match.group(2).strip()
 
             if command in cmd_dict:
-                ctx = CommandContext(story_id, message, story_engine, chains)
+                ctx = bot_commands.CommandContext(story_id, message, story_engine, chains)
                 await cmd_dict[command].execute(ctx, args)
                 await _run_summary(story_id, story_engine, chains, message.channel)
         elif cfg and cfg.yolo_mode:
-            ctx = CommandContext(story_id, message, story_engine, chains)
+            ctx = bot_commands.CommandContext(story_id, message, story_engine, chains)
             await cmd_dict["s"].execute(ctx, content)
             await _run_summary(story_id, story_engine, chains, message.channel)
     except Exception as e:

@@ -212,6 +212,8 @@ class AboutCommand(BotCommand):
         about_text = dedent(f"""\
             # 📖 Storyteller bot
                             
+            By Charles Miller <cmiller@pastiche.org>
+                            
             Collaborate with me to write stories! Currently I only support generic fantasy stories, think the old Dragonlance or early Forgotten Realms novels.
 
             Currently using: {self.model_name}
@@ -267,3 +269,13 @@ class OocCommand(BotCommand):
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
         pass
+
+class DumpStoryCommand(BotCommand):
+    help_text = "- dump the current story data to a file."
+    def __init__(self, story_repository: FileStoryRepository):
+        self.story_repository = story_repository
+
+    async def execute(self, ctx: CommandContext, args: str) -> None:
+        story = self.story_repository.load(ctx.story_id)
+        await ctx.message.author.send(f"Story data for {ctx.message.channel.name}.", file=discord.File(fp=StringIO(story.model_dump_json(indent=2)), filename="story.json"))
+        await ctx.add_reaction("👍")

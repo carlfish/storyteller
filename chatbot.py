@@ -67,7 +67,7 @@ def main():
         model = init_chat_model(model=os.getenv("OPENAPI_MODEL", "gpt-4.1-mini"), model_provider="openai")
     elif os.getenv("ANTHROPIC_API_KEY", None):
         model = init_chat_model(model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"), model_provider="anthropic")
-    if os.getenv("XAI_API_KEY", None):
+    elif os.getenv("XAI_API_KEY", None):
         model = init_chat_model(model=os.getenv("XAI_MODEL", "grok-3-latest"), model_provider="xai")
     else:
         raise ValueError("No API key found")
