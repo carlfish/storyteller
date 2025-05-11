@@ -147,7 +147,7 @@ class SummarizeCommand(Command):
         return (old, remaining)
 
     async def update_scenes(self, old_scenes: List[Scene], messages, msg_count: int) -> List[Scene]:
-        await self.response.send_message(f"⌛ Pruning {len(messages)} of {msg_count} messages: Updating scene summary (from {len(old_scenes)} scenes)…")
+        await self.response.send_message(f"⌛ Pruning {len(messages)} of {msg_count} messages: updating scene summaries…")
 
         scene_dump = "\n\n".join([f"## {scene.time_and_location}\n{scene.events}" for scene in old_scenes])
         message_dump = "\n\n".join([message.text() for message in messages])
@@ -160,7 +160,7 @@ class SummarizeCommand(Command):
         return response.scenes
 
     async def update_characters(self, old_characters: List[Character], messages, msg_count: int) -> List[Character]:
-        await self.response.send_message(f"⌛ Pruning {len(messages)} of {msg_count} messages: Updating character bios (from {len(old_characters)} characters)…")
+        await self.response.send_message(f"⌛ Pruning {len(messages)} of {msg_count} messages: Updating character bios…")
 
         character_dump = "\n\n".join([f"## {character.name} ({character.role})\n{character.bio}" for character in old_characters])
         message_dump = "\n\n".join([message.text() for message in messages])
@@ -191,7 +191,7 @@ class CloseChapterCommand(Command):
         self.chapter_title = chapter_title
 
     async def close_chapter(self, story: Story):
-        await self.chapter_response.send_message(f"⏳ Closing chapter {len(story.chapters)}…")
+        await self.chapter_response.send_message(f"⏳ Closing chapter {len(story.chapters) + 1}…")
         scene_dump = "\n\n".join([f"## {scene.time_and_location}\n{scene.events}" for scene in story.scenes])
 
         response: Chapter = await self.chains.chapter_chain.ainvoke({

@@ -1,12 +1,16 @@
-✅ async-ify the command / command-runner
+# UX
+
 ✅ implement yolo mode
 📌 long message support
 📌 dump story command
 📌 view chapters, characters, scenes
-📌 reversible character updates, or maybe full-on event stream mode (needed for...)
+📌 reversible character updates
 📌 add/modify character
 📌 title story
-📌 switch stories
+📌 story history / switch stories
 
+# Backend
 
-
+✅ async-ify the command / command-runner
+📌 event-sourced full history
+📌 tiered model selection (i.e. cheap/fast model for summaries, full model for story)

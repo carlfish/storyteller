@@ -72,6 +72,8 @@ def main():
     else:
         raise ValueError("No API key found")
 
+    # model = init_chat_model(model="chatty2", model_provider="ollama")
+
     context = init_context(prompt_dir)
     chains = Chains(model=model, prompts=context.prompts)
     repo = FileStoryRepository(repo_dir=os.path.expanduser("~/story_repo"))
@@ -112,7 +114,7 @@ def main():
                 cmd = RewriteCommand(response=response, text=text)
             elif user_input.startswith("chapter"):
                 title = re.sub("^chapter:?", "", user_input).strip()
-                cmd = CloseChapterCommand(chains, response=response, chapter_title=title)
+                cmd = CloseChapterCommand(chains, summary_response=response, chapter_response=response, chapter_title=title)
             else:
                 cmd = ChatCommand(chains, response=response, user_input=user_input)
                 

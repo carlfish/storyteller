@@ -88,14 +88,8 @@ An interactive storytelling chatbot that supports multiple LLM providers and tri
 
 ### Discord Bot Commands
 
-The Discord bot supports the following commands:
+Start with:
 
-- `~newstory` - Start a new story, abandoning any story in progress
-- `~s [text]` - Write the next section of the story
-- `~retry` - Regenerate the last storyteller response
-- `~rewind` - Remove the last user message and storyteller response
-- `~rewrite [text]` - Replace the last storyteller response with provided text
-- `~chapter [title]` - Close the current chapter
 - `~help` - Show available commands
 - `~about` - Show information about the bot
 
@@ -105,6 +99,5 @@ Each Discord channel can have its own story, and stories are automatically saved
 
 - The chatbot will use the first available API key in the order: OpenAI, Anthropic, XAI
 - Stories are saved in a repository located at `~/story_repo`
-- The chatbot uses a sophisticated prompt system with separate prompts for different aspects of the story (base, summary, character management, etc.)
 - Token limits are configurable through environment variables to manage memory usage and response quality
 - Character generation is supported through initial character descriptions 
