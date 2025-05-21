@@ -1,0 +1,76 @@
+import os
+from dotenv import load_dotenv
+from langchain.chat_models import init_chat_model
+from storyteller.engine import *
+from langchain_core.chat_history import InMemoryChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+import argparse
+
+load_dotenv()
+
+def load_file(filename: str) -> str:
+    with open(filename, "r") as f:
+        return f.read().strip()
+
+def make_chat_chain(llm: BaseLanguageModel, base_prompt: str):
+    history = InMemoryChatMessageHistory()
+
+    def get_chat_history(session_id: str):
+        return history
+
+    # Create a prompt template
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", base_prompt),
+        MessagesPlaceholder(variable_name="messages"),
+        ("human", "{input}")
+    ])
+
+    chain = prompt | llm
+    
+    return RunnableWithMessageHistory(chain, get_chat_history, history_messages_key="messages")
+
+def single_prompt(model: BaseLanguageModel, prompt: str):
+    chain = make_basic_chain(model, prompt)
+    for chunk in chain.stream({}):
+        print(chunk.content, end="", flush=True)
+
+def chat_session(model: BaseLanguageModel, prompt: str):
+    config = {"configurable": {"session_id": "abc11"}}
+
+    chain = make_chat_chain(model, prompt)
+    while True:
+        user_input = input("\n\nYou: ")
+        if user_input == "exit":
+            break
+        print()
+        for chunk in chain.stream({"input": [HumanMessage(content=user_input)]}, config=config):
+            print(chunk.content, end="", flush=True)
+
+def main():
+    parser = argparse.ArgumentParser(description='Run a quick prompt or chat session')
+    parser.add_argument('-t', '--type', choices=['chat', 'single'], default='single',
+                      help='Type of interaction: single prompt or chat session (default: single)')
+    args = parser.parse_args()
+
+    prompt = "prompts/quickrun.md"
+
+    if os.getenv("OPENAI_API_KEY", None):
+        model = init_chat_model(model=os.getenv("OPENAPI_MODEL", "gpt-4.1-mini"), model_provider="openai")
+    elif os.getenv("ANTHROPIC_API_KEY", None):
+        model = init_chat_model(model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"), model_provider="anthropic")
+    elif os.getenv("XAI_API_KEY", None):
+        model = init_chat_model(model=os.getenv("XAI_MODEL", "grok-3-latest"), model_provider="xai")
+    else:
+        raise ValueError("No API key found")
+
+    # model = init_chat_model(model="deepseek-r1", model_provider="ollama")
+
+    prompt = load_file(prompt)
+
+    if args.type == 'chat':        
+        chat_session(model, prompt)
+    else:
+        single_prompt(model, prompt)
+
+if __name__ == "__main__":
+    main()

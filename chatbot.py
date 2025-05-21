@@ -11,6 +11,7 @@ import asyncio
 load_dotenv()
 
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
+STORYTELLER_CLI_STORY = os.getenv("STORYTELLER_CLI_STORY", "floop")
 HISTORY_MIN_TOKENS = int(os.getenv("HISTORY_MIN_TOKENS", "1024"))
 HISTORY_MAX_TOKENS = int(os.getenv("HISTORY_MAX_TOKENS", "4096"))
 
@@ -60,8 +61,8 @@ class StdoutResponse(Response):
         print(msg, end="", flush=True)
 
 def main():    
-    prompt_dir = "prompts/storyteller/prompts"
-    story_dir = "prompts/storyteller/stories/genfantasy"
+    prompt_dir = "../prompts/default2"
+    story_dir = "../prompts/default2"
 
     if os.getenv("OPENAI_API_KEY", None):
         model = init_chat_model(model=os.getenv("OPENAPI_MODEL", "gpt-4.1-mini"), model_provider="openai")
@@ -78,15 +79,15 @@ def main():
     chains = Chains(model=model, prompts=context.prompts)
     repo = FileStoryRepository(repo_dir=os.path.expanduser("~/story_repo"))
 
-    if not repo.story_exists("floop"):
+    if not repo.story_exists(STORYTELLER_CLI_STORY):
         init_chars = load_file(f"{story_dir}/chargen.md")
         context.story.characters = make_characters(chains.character_create_chain, descriptions=init_chars)
-        repo.save("floop", context.story)
+        repo.save(STORYTELLER_CLI_STORY, context.story)
 
     engine = StoryEngine(story_repository=repo)
 
-    preview_story = repo.load("floop")
-    story_id = "floop"
+    preview_story = repo.load(STORYTELLER_CLI_STORY)
+    story_id = STORYTELLER_CLI_STORY
     if (len(preview_story.current_messages) > 0):
         print(f"Last message:\n\n{preview_story.current_messages[-1].content}\n\n")
 
