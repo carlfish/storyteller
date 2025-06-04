@@ -1,6 +1,7 @@
 import discord
 from langchain.chat_models import init_chat_model
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
+from storyteller.common import load_file, pick_model
 import storyteller.commands
 import re
 import os
@@ -22,14 +23,9 @@ COMMAND_REGEX = re.compile(r'^~(\w+)(?:\s+)?([\s\S]*)$', re.MULTILINE)
 HISTORY_MIN_TOKENS = int(os.getenv("HISTORY_MIN_TOKENS", "1024"))
 HISTORY_MAX_TOKENS = int(os.getenv("HISTORY_MAX_TOKENS", "4096"))
 
-STORY_DIR = os.path.expanduser("~/story_repo")
-PROMPT_DIR = "prompts/storyteller/prompts"
-INIT_STORY_DIR = "prompts/storyteller/stories/genfantasy"
-
-def load_file(filename: str) -> str:
-    with open(filename, "r") as f:
-        return f.read().strip()
-
+STORE_DIR = os.path.expanduser("~/story_repo")
+PROMPT_DIR = os.getenv("PROMPT_DIR", "prompts/storyteller/prompts")
+STORY_DIR = os.getenv("STORY_DIR", "prompts/storyteller/stories/genfantasy")
 class ChannelConfig(BaseModel):
     @classmethod
     def new(cls, story_id: str) -> "ChannelConfig":
@@ -83,20 +79,14 @@ prompts=Prompts(
 async def on_ready():
     print(f'Logged in as {client.user}')
 
-if os.getenv("OPENAI_API_KEY", None):
-    model = init_chat_model(model=os.getenv("OPENAPI_MODEL", "gpt-4.1-mini"), model_provider="openai")
-elif os.getenv("ANTHROPIC_API_KEY", None):
-    model = init_chat_model(model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"), model_provider="anthropic")
-elif os.getenv("XAI_API_KEY", None):
-    model = init_chat_model(model=os.getenv("XAI_MODEL", "grok-3-latest"), model_provider="xai")
-else:
-    raise ValueError("No API key found")
+model_name, model_provider = pick_model()
+model = init_chat_model(model=model_name, model_provider=model_provider)
 
-story_repository = FileStoryRepository(STORY_DIR)
+story_repository = FileStoryRepository(STORE_DIR)
 story_engine = StoryEngine(story_repository)
 chains = Chains(model, prompts)
 
-channel_configs = ChannelConfigRegistry(STORY_DIR)
+channel_configs = ChannelConfigRegistry(STORE_DIR)
 
 def set_channel_story(channel_id: str, story_id: str) -> None:
     cfg = channel_configs.get_config(channel_id)
@@ -120,7 +110,7 @@ def get_channel_yolo(channel_id: str) -> bool:
         return False
     return cfg.yolo_mode
 
-chargen_prompt = load_file(f"{INIT_STORY_DIR}/chargen.md")
+chargen_prompt = load_file(f"{STORY_DIR}/chargen.md")
 
 story_commands: dict[str, bot_commands.BotCommand] = {
     "newstory": bot_commands.NewStoryCommand(set_channel_story, story_repository, chargen_prompt), 

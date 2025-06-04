@@ -8,6 +8,12 @@ import argparse
 
 load_dotenv()
 
+default_models = {
+    'openai': 'gpt-4.1-mini',
+    'anthropic': 'claude-3-5-haiku-latest',
+    'xai': 'grok-3-latest'
+}
+
 def load_file(filename: str) -> str:
     with open(filename, "r") as f:
         return f.read().strip()
@@ -46,26 +52,26 @@ def chat_session(model: BaseLanguageModel, prompt: str):
         for chunk in chain.stream({"input": [HumanMessage(content=user_input)]}, config=config):
             print(chunk.content, end="", flush=True)
 
-def main():
+def parse_args():
     parser = argparse.ArgumentParser(description='Run a quick prompt or chat session')
     parser.add_argument('-t', '--type', choices=['chat', 'single'], default='single',
                       help='Type of interaction: single prompt or chat session (default: single)')
-    args = parser.parse_args()
+    parser.add_argument('-f', '--file', type=str, default='prompts/quickrun.md',
+                        help='Path to prompt file')
+    parser.add_argument('-m', '--model', type=str,
+                        help='Override the default model for the provider')
+    parser.add_argument('-p', '--provider', type=str, required=True, choices=['openai', 'anthropic', 'xai', 'ollama'],
+                        default='openai', help='AI Provider to use')
+    return parser.parse_args()
 
-    prompt = "prompts/quickrun.md"
+def main():
+    args = parse_args()
 
-    if os.getenv("OPENAI_API_KEY", None):
-        model = init_chat_model(model=os.getenv("OPENAPI_MODEL", "gpt-4.1-mini"), model_provider="openai")
-    elif os.getenv("ANTHROPIC_API_KEY", None):
-        model = init_chat_model(model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"), model_provider="anthropic")
-    elif os.getenv("XAI_API_KEY", None):
-        model = init_chat_model(model=os.getenv("XAI_MODEL", "grok-3-latest"), model_provider="xai")
-    else:
-        raise ValueError("No API key found")
+    if not args.model and args.provider in default_models:
+        args.model = default_models[args.provider]
 
-    # model = init_chat_model(model="deepseek-r1", model_provider="ollama")
-
-    prompt = load_file(prompt)
+    model = init_chat_model(model=args.model, model_provider=args.provider)
+    prompt = load_file(args.file)
 
     if args.type == 'chat':        
         chat_session(model, prompt)

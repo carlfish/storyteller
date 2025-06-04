@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from storyteller.models import *
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
 from storyteller.commands import *
+from common import load_file, pick_model
 import os
 import logging
 import asyncio
@@ -21,9 +22,6 @@ if DEBUG:
 else:
     logging.basicConfig(level=logging.WARN)
 
-def load_file(filename: str) -> str:
-    with open(filename, "r") as f:
-        return f.read().strip()
 
 def init_context(prompt_dir: str):
     return Context(
@@ -61,19 +59,11 @@ class StdoutResponse(Response):
         print(msg, end="", flush=True)
 
 def main():    
-    prompt_dir = "../prompts/default2"
-    story_dir = "../prompts/default2"
+    prompt_dir = os.getenv("PROMPT_DIR", "prompts/storyteller/prompts")
+    story_dir = os.getenv("STORY_DIR", "prompts/storyteller/stories/genfantasy")
 
-    if os.getenv("OPENAI_API_KEY", None):
-        model = init_chat_model(model=os.getenv("OPENAPI_MODEL", "gpt-4.1-mini"), model_provider="openai")
-    elif os.getenv("ANTHROPIC_API_KEY", None):
-        model = init_chat_model(model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest"), model_provider="anthropic")
-    elif os.getenv("XAI_API_KEY", None):
-        model = init_chat_model(model=os.getenv("XAI_MODEL", "grok-3-latest"), model_provider="xai")
-    else:
-        raise ValueError("No API key found")
-
-    # model = init_chat_model(model="chatty2", model_provider="ollama")
+    model_name, model_provider = pick_model()
+    model = init_chat_model(model=model_name, model_provider=model_provider)
 
     context = init_context(prompt_dir)
     chains = Chains(model=model, prompts=context.prompts)
