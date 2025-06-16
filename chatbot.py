@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from storyteller.models import *
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
 from storyteller.commands import *
-from common import load_file, pick_model
+from storyteller.common import load_file, pick_model
 import os
 import logging
 import asyncio

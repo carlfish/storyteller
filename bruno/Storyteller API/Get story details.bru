@@ -1,0 +1,15 @@
+meta {
+  name: Get story details
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/stories/:story_uuid
+  body: none
+  auth: none
+}
+
+params:path {
+  story_uuid: 
+}

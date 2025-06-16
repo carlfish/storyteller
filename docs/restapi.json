@@ -1,0 +1,259 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Storyteller API",
+    "version": "0.1.0",
+    "description": "REST API for creating and managing interactive stories with AI-powered storytelling"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/stories": {
+      "post": {
+        "summary": "Create a new story",
+        "description": "Creates a new story with the provided character descriptions and returns the story UUID",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Story created successfully",
+            "headers": {
+              "Location": {
+                "description": "URL of the created story",
+                "schema": {
+                  "type": "string",
+                  "example": "/stories/550e8400-e29b-41d4-a716-446655440000"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stories/{story_uuid}": {
+      "get": {
+        "summary": "Get story details",
+        "description": "Retrieves the complete story state including characters, chapters, scenes, and message history",
+        "parameters": [
+          {
+            "name": "story_uuid",
+            "in": "path",
+            "required": true,
+            "description": "UUID of the story to retrieve",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Story details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Story"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Story not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Execute a command on the story",
+        "description": "Executes a storytelling command (chat, retry, rewind, fix, rewrite, chapter) on the specified story",
+        "parameters": [
+          {
+            "name": "story_uuid",
+            "in": "path",
+            "required": true,
+            "description": "UUID of the story to execute the command on",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Command executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Story not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateStoryRequest": {
+        "type": "object",
+        "required": ["characters"],
+        "properties": {
+          "characters": {
+            "type": "string",
+            "description": "Character descriptions to initialize the story with",
+            "example": "A brave knight named Sir Galahad who seeks the Holy Grail. A wise wizard named Merlin who guides heroes on their quests."
+          }
+        }
+      },
+      "CommandRequest": {
+        "type": "object",
+        "required": ["command"],
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": ["chat", "retry", "rewind", "fix", "rewrite", "chapter"],
+            "description": "The command to execute on the story"
+          },
+          "body": {
+            "type": "string",
+            "description": "Optional command body (required for chat, fix, rewrite, and chapter commands)",
+            "example": "I walk into the tavern and order a drink"
+          }
+        }
+      },
+      "CommandResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["success"],
+            "description": "Status of the command execution"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Response messages from the AI and system"
+          }
+        }
+      },
+      "Story": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the story"
+          },
+          "characters": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "List of characters in the story"
+          },
+          "chapters": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "List of chapters in the story"
+          },
+          "scenes": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "List of scenes in the story"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Message history for the story"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the story was created"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the story was last updated"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      }
+    }
+  }
+}

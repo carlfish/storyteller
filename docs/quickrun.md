@@ -10,14 +10,15 @@ python quickrun.py [options]
 
 ### Options
 
-- `-t, --type`: Type of interaction (default: single)
+- `-m, --mode`: Interaction mode (default: single)
   - `single`: Run a single prompt and exit
   - `chat`: Start an interactive chat session
 - `-f, --file`: Path to prompt file (default: prompts/quickrun.md)
-- `-m, --model`: Override the default model for the provider
 - `-p, --provider`: AI Provider to use (required)
   - Choices: openai, anthropic, xai, ollama
   - Default: openai
+- `--model`: Override the default model for the provider
+- `-t, --temperature`: Temperature for model generation (default: 1.2)
 
 ### Default Models
 
@@ -33,7 +34,7 @@ Run a single prompt with default OpenAI model:
 python quickrun.py -p openai -f my_prompt.md
 ```
 
-Start a chat session with a specific model:
+Start a chat session with a specific model and temperature:
 ```bash
-python quickrun.py -t chat -p anthropic -m claude-3-opus-latest
+python quickrun.py -m chat -p anthropic --model claude-3-opus-latest -t 0.8
 ``` 

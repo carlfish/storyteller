@@ -2,12 +2,13 @@
 
 ✅ implement yolo mode
 📌 long message support
-📌 dump story command
+✅ dump story command
 📌 view chapters, characters, scenes
 📌 reversible character updates
 📌 add/modify character
 📌 title story
 📌 story history / switch stories
+📌 suggest opening para / next prompt
 
 # Backend
 

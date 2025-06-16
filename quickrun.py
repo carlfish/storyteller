@@ -54,14 +54,16 @@ def chat_session(model: BaseLanguageModel, prompt: str):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Run a quick prompt or chat session')
-    parser.add_argument('-t', '--type', choices=['chat', 'single'], default='single',
+    parser.add_argument('-m', '--mode', choices=['chat', 'single'], default='single',
                       help='Type of interaction: single prompt or chat session (default: single)')
     parser.add_argument('-f', '--file', type=str, default='prompts/quickrun.md',
                         help='Path to prompt file')
-    parser.add_argument('-m', '--model', type=str,
+    parser.add_argument('--model', type=str,
                         help='Override the default model for the provider')
     parser.add_argument('-p', '--provider', type=str, required=True, choices=['openai', 'anthropic', 'xai', 'ollama'],
                         default='openai', help='AI Provider to use')
+    parser.add_argument('-t', '--temperature', type=float, default=1.2,
+                        help='Temperature for model generation (default: 1.2)')
     return parser.parse_args()
 
 def main():
@@ -70,10 +72,10 @@ def main():
     if not args.model and args.provider in default_models:
         args.model = default_models[args.provider]
 
-    model = init_chat_model(model=args.model, model_provider=args.provider)
+    model = init_chat_model(model=args.model, model_provider=args.provider, temperature=args.temperature)
     prompt = load_file(args.file)
 
-    if args.type == 'chat':        
+    if args.mode == 'chat':        
         chat_session(model, prompt)
     else:
         single_prompt(model, prompt)

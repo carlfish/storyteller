@@ -40,6 +40,7 @@ messages to maintain a consistency of tone and detail.
 
 - [CLI Chatbot](docs/chatbot.md) - Main interactive CLI interface
 - [Quickrun Tool](docs/quickrun.md) - Utility for quick prompts and chat sessions
+- [Web Service](docs/webservice.md) - HTTP API for story creation and management
 - [Discord Bot](docs/discordbot.md) - Discord bot version with multi-channel support
 
 ## Notes

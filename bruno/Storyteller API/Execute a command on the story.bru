@@ -1,0 +1,22 @@
+meta {
+  name: Execute a command on the story
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/stories/:story_uuid
+  body: json
+  auth: none
+}
+
+params:path {
+  story_uuid: 
+}
+
+body:json {
+  {
+    "command": "",
+    "body": ""
+  }
+}
