@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 from langchain_core.chat_history import BaseMessage, BaseChatMessageHistory
-from langchain_core.language_models.base import BaseLanguageModel
+from langchain_core.language_models.base import BaseLanguageModel, Runnable
 from langchain_core.prompts import (
     PromptTemplate,
     ChatPromptTemplate,
     MessagesPlaceholder,
 )
-from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.messages.utils import merge_message_runs
+from langchain_core.messages.ai import AIMessageChunk, add_ai_message_chunks
 
 from .models import Story, Scenes, Chapter, Characters, Prompts
 
@@ -69,7 +70,7 @@ def make_structured_chain(
 
 class Chains:
     def __init__(self, model: BaseLanguageModel, prompts: Prompts):
-        self.naked_chat_chain = make_chat_chain(model, prompts.base_prompt)
+        self.chat_chain = make_chat_chain(model, prompts.base_prompt)
         self.summary_chain = make_structured_chain(
             model, prompts.scene_summary_prompt, Scenes
         )
@@ -82,18 +83,6 @@ class Chains:
         )
         self.character_create_chain = make_structured_chain(
             model, prompts.character_creation_prompt, Characters
-        )
-
-    def chat_chain(self, story: Story):
-        def get_session_history():
-            return StoryBackedMessageHistory(story)
-
-        # Create the chain with message history
-        return RunnableWithMessageHistory(
-            self.naked_chat_chain,
-            get_session_history,
-            input_messages_key="input",
-            history_messages_key="chat_history",
         )
 
 
@@ -183,3 +172,38 @@ class StoryEngine:
             self.story_repository.save(story_id, story)
         finally:
             self.story_repository.unlock(story_id)
+
+
+# Helper functions
+
+
+async def run_chat(
+    chat_chain: Runnable,
+    context: dict,
+    current_messages: List[BaseMessage],
+    user_input: str,
+    response: OutputSink,
+) -> List[BaseMessage]:
+    chunks = []
+    await response.start_stream()
+
+    async for chunk in chat_chain.astream(
+        {
+            **context,
+            "chat_history": current_messages,
+            "input": user_input,
+        }
+    ):
+        chunks.append(chunk)
+        await response.append(chunk.content)
+
+    await response.end_stream()
+
+    if len(chunks) > 0 and all(isinstance(chunk, AIMessageChunk) for chunk in chunks):
+        merged = [add_ai_message_chunks(*chunks)]
+    else:
+        merged = merge_message_runs(
+            chunks, chunk_separator=""
+        )  # juts in case, but the output will probably be wonky
+
+    return merged

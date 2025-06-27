@@ -4,14 +4,14 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from langchain.chat_models import init_chat_model
 
 from storyteller.models import Story
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
 from storyteller import (
     commands as c,
 )  # Aliased to avoid clash with Response from fastapi
-from storyteller.common import load_file, pick_model
+from storyteller.common import load_file, add_standard_model_args, init_model
+import argparse
 
 load_dotenv()
 
@@ -23,8 +23,10 @@ PROMPT_DIR = os.getenv("PROMPT_DIR", "prompts/storyteller/prompts")
 STORY_DIR = os.getenv("STORY_DIR", "prompts/storyteller/stories/genfantasy")
 HISTORY_MIN_TOKENS = int(os.getenv("HISTORY_MIN_TOKENS", "1024"))
 HISTORY_MAX_TOKENS = int(os.getenv("HISTORY_MAX_TOKENS", "4096"))
-model_name, model_provider = pick_model()
-model = init_chat_model(model=model_name, model_provider=model_provider)
+
+parser = argparse.ArgumentParser(description="Tell a story")
+add_standard_model_args(parser)
+model = init_model(parser.parse_args())
 
 prompts = c.Prompts(
     base_prompt=load_file(f"{PROMPT_DIR}/base_prompt.md"),

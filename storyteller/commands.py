@@ -1,7 +1,7 @@
 from typing import List
-from .engine import Command, Chains
+from .engine import Command, Chains, run_chat
 from .models import Character, Scenes, Story, Chapter, Characters, Scene
-from langchain_core.messages import BaseMessage, AIMessage
+from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 from langchain_core.messages.utils import count_tokens_approximately
 from abc import ABC, abstractmethod
 
@@ -30,9 +30,9 @@ class Response(ABC):
 
 class ChatCommand(Command[None]):
     def __init__(self, chains: Chains, response: Response, user_input: str):
-        self.chains = chains
-        self.response = response
-        self.user_input = user_input
+        self.chains: Chains = chains
+        self.response: Response = response
+        self.user_input: str = user_input
 
     def _make_chapters(self, chapters: List[Chapter]):
         summary = ""
@@ -52,20 +52,21 @@ class ChatCommand(Command[None]):
         return summary
 
     async def run(self, story: Story) -> None:
-        chat_chain = self.chains.chat_chain(story)
-        await self.response.start_stream()
-
-        async for chunk in chat_chain.astream(
-            {
-                "input": self.user_input,
+        chat_chain = self.chains.chat_chain
+        merged = await run_chat(
+            chat_chain=chat_chain,
+            context={
                 "characters": story.characters,
                 "scenes": f"## Chapter {len(story.chapters) + 1}\n\n {self._make_scenes(story.scenes)}",
                 "chapters": self._make_chapters(story.chapters),
-            }
-        ):
-            await self.response.append(chunk.content)
+            },
+            current_messages=story.current_messages,
+            user_input=self.user_input,
+            response=self.response,
+        )
 
-        await self.response.end_stream()
+        story.current_messages.append(HumanMessage(self.user_input))
+        story.current_messages.extend(merged)
 
 
 class RetryCommand(Command):

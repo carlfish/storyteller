@@ -1,6 +1,5 @@
 import re
 from typing import List
-from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
 from storyteller.models import Context, Prompts, Story, Character
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
@@ -14,10 +13,11 @@ from storyteller.commands import (
     ChatCommand,
     SummarizeCommand,
 )
-from storyteller.common import load_file, pick_model
+from storyteller.common import load_file, add_standard_model_args, init_model
 import os
 import logging
 import asyncio
+import argparse
 
 load_dotenv()
 
@@ -71,12 +71,17 @@ class StdoutResponse(Response):
         print(msg, end="", flush=True)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Tell a story")
+    add_standard_model_args(parser)
+    return parser.parse_args()
+
+
 def main():
     prompt_dir = os.getenv("PROMPT_DIR", "prompts/storyteller/prompts")
     story_dir = os.getenv("STORY_DIR", "prompts/storyteller/stories/genfantasy")
 
-    model_name, model_provider = pick_model()
-    model = init_chat_model(model=model_name, model_provider=model_provider)
+    model = init_model(parse_args())
 
     context = init_context(prompt_dir)
     chains = Chains(model=model, prompts=context.prompts)

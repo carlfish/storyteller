@@ -1,20 +1,14 @@
 from dotenv import load_dotenv
-from langchain.chat_models import init_chat_model
 from storyteller.engine import make_basic_chain
 from langchain_core.language_models.base import BaseLanguageModel
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage
 from langchain_core.chat_history import InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
+from storyteller.common import init_model, add_standard_model_args
 import argparse
 
 load_dotenv()
-
-default_models = {
-    "openai": "gpt-4.1-mini",
-    "anthropic": "claude-3-5-haiku-latest",
-    "xai": "grok-3-latest",
-}
 
 
 def load_file(filename: str) -> str:
@@ -65,7 +59,7 @@ def chat_session(model: BaseLanguageModel, prompt: str):
             print(chunk.content, end="", flush=True)
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a quick prompt or chat session")
     parser.add_argument(
         "-m",
@@ -81,37 +75,13 @@ def parse_args():
         default="prompts/quickrun.md",
         help="Path to prompt file",
     )
-    parser.add_argument(
-        "--model", type=str, help="Override the default model for the provider"
-    )
-    parser.add_argument(
-        "-p",
-        "--provider",
-        type=str,
-        required=True,
-        choices=["openai", "anthropic", "xai", "ollama"],
-        default="openai",
-        help="AI Provider to use",
-    )
-    parser.add_argument(
-        "-t",
-        "--temperature",
-        type=float,
-        default=1.2,
-        help="Temperature for model generation (default: 1.2)",
-    )
+    add_standard_model_args(parser)
     return parser.parse_args()
 
 
 def main():
-    args = parse_args()
-
-    if not args.model and args.provider in default_models:
-        args.model = default_models[args.provider]
-
-    model = init_chat_model(
-        model=args.model, model_provider=args.provider, temperature=args.temperature
-    )
+    args: argparse.Namespace = parse_args()
+    model = init_model(args)
     prompt = load_file(args.file)
 
     if args.mode == "chat":

@@ -1,7 +1,6 @@
 import discord
-from langchain.chat_models import init_chat_model
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
-from storyteller.common import load_file, pick_model
+from storyteller.common import load_file, add_standard_model_args, init_model
 import storyteller.commands
 import re
 import os
@@ -11,6 +10,7 @@ from pydantic import BaseModel
 from threading import Lock
 from dotenv import load_dotenv
 import bot.commands as bot_commands
+import argparse
 
 load_dotenv()
 
@@ -87,8 +87,9 @@ async def on_ready():
     print(f"Logged in as {client.user}")
 
 
-model_name, model_provider = pick_model()
-model = init_chat_model(model=model_name, model_provider=model_provider)
+parser = argparse.ArgumentParser(description="Tell a story")
+add_standard_model_args(parser)
+model = init_model(parser.parse_args())
 
 story_repository = FileStoryRepository(STORE_DIR)
 story_engine = StoryEngine(story_repository)

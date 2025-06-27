@@ -1,4 +1,11 @@
-import os
+import argparse
+from langchain.chat_models import init_chat_model
+
+default_models = {
+    "openai": "gpt-4.1-mini",
+    "anthropic": "claude-3-5-haiku-latest",
+    "xai": "grok-3-latest",
+}
 
 
 def load_file(filename: str) -> str:
@@ -6,17 +13,33 @@ def load_file(filename: str) -> str:
         return f.read().strip()
 
 
-def pick_model():
-    if os.getenv("OPENAI_API_KEY", None):
-        model_provider = "openai"
-        model_name = os.getenv("OPENAPI_MODEL", "gpt-4.1-mini")
-    elif os.getenv("ANTHROPIC_API_KEY", None):
-        model_provider = "anthropic"
-        model_name = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-latest")
-    elif os.getenv("XAI_API_KEY", None):
-        model_provider = "xai"
-        model_name = os.getenv("XAI_MODEL", "grok-3-latest")
-    else:
-        raise ValueError("No API key found")
+def add_standard_model_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--model", type=str, help="Override the default model for the provider"
+    )
+    parser.add_argument(
+        "-p",
+        "--provider",
+        type=str,
+        required=True,
+        choices=["openai", "anthropic", "xai", "ollama"],
+        default="openai",
+        help="AI Provider to use",
+    )
+    parser.add_argument(
+        "-t",
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="Temperature for model generation (default: 1.0)",
+    )
 
-    return model_name, model_provider
+
+def init_model(args: argparse.Namespace):
+    if not args.model and args.provider in default_models:
+        args.model = default_models[args.provider]
+
+    model = init_chat_model(
+        model=args.model, model_provider=args.provider, temperature=args.temperature
+    )
+    return model

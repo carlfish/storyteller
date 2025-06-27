@@ -26,8 +26,34 @@ A Discord bot version of the Storyteller chatbot that allows multiple channels t
 
 4. Run the Discord bot:
    ```bash
-   uv run python discordbot.py
+   uv run python discordbot.py -p openai
    ```
+
+## Command-Line Model Selection
+
+You can specify the AI model provider and model using command-line arguments:
+
+```bash
+# Use OpenAI with default model
+uv run python discordbot.py -p openai
+
+# Use OpenAI with specific model
+uv run python discordbot.py -p openai -m gpt-4
+
+# Use Anthropic Claude
+uv run python discordbot.py -p anthropic -m claude-3-5-sonnet-latest
+
+# Use XAI Grok
+uv run python discordbot.py -p xai -m grok-3-latest
+
+# Use Ollama with a local model
+uv run python discordbot.py -p ollama -m llama2
+```
+
+### Available Options
+
+- `-p, --provider PROVIDER` - AI provider to use (openai, anthropic, xai, ollama) **[Required]**
+- `-m, --model MODEL_NAME` - Specify the model name to use (optional, uses provider default)
 
 ## Environment Variables
 

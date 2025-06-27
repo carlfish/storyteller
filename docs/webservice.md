@@ -5,10 +5,36 @@ A FastAPI-based web service that provides HTTP endpoints for the storyteller cha
 ## Usage
 
 ```bash
-python webservice.py
+python webservice.py -p openai
 ```
 
 The service will start on the configured host and port, providing REST endpoints for story creation and management.
+
+## Command-Line Model Selection
+
+The web service requires specifying an AI provider when starting:
+
+```bash
+# Start with OpenAI (default model)
+python webservice.py -p openai
+
+# Start with specific OpenAI model
+python webservice.py -p openai -m gpt-4
+
+# Start with Anthropic Claude
+python webservice.py -p anthropic -m claude-3-5-sonnet-latest
+
+# Start with XAI Grok
+python webservice.py -p xai -m grok-3-latest
+
+# Start with Ollama
+python webservice.py -p ollama -m llama2
+```
+
+### Available Options
+
+- `-p, --provider PROVIDER` - AI provider to use (openai, anthropic, xai, ollama) **[Required]**
+- `-m, --model MODEL_NAME` - Specify the model name to use (optional, uses provider default)
 
 ## Configuration
 
@@ -41,10 +67,10 @@ Stories are saved to `~/story_repo` as JSON files, allowing persistence across s
 
 Start the service on a custom port:
 ```bash
-HTTP_PORT=3000 python webservice.py
+HTTP_PORT=3000 python webservice.py -p openai
 ```
 
 Run with specific story configuration:
 ```bash
-STORY_DIR=/path/to/stories PROMPT_DIR=/path/to/prompts python webservice.py
+STORY_DIR=/path/to/stories PROMPT_DIR=/path/to/prompts python webservice.py -p anthropic
 ```
