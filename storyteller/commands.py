@@ -1,5 +1,5 @@
 from typing import List
-from .engine import Command, Chains, run_chat
+from .engine import Command, Chains, Response, run_chat
 from .models import Character, Scenes, Story, Chapter, Characters, Scene, Prompts
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 from langchain_core.messages.utils import count_tokens_approximately
@@ -8,24 +8,6 @@ from abc import ABC, abstractmethod
 
 class CommandError(Exception):
     pass
-
-
-class Response(ABC):
-    @abstractmethod
-    async def send_message(self, msg: str):
-        pass
-
-    @abstractmethod
-    async def start_stream(self):
-        pass
-
-    @abstractmethod
-    async def end_stream(self):
-        pass
-
-    @abstractmethod
-    async def append(self, msg: str):
-        pass
 
 
 def _make_chapters(chapters: List[Chapter]):
@@ -46,7 +28,7 @@ def _make_scenes(scenes: List[Scene]):
     return summary
 
 
-class ChatCommand(Command[None]):
+class ChatCommand(Command):
     def __init__(self, chains: Chains, response: Response, user_input: str):
         self.chains: Chains = chains
         self.response: Response = response
@@ -81,7 +63,7 @@ class RetryCommand(Command):
 
         user_input = story.current_messages[-2]
         story.current_messages = story.current_messages[0:-2]
-        await ChatCommand(self.chains, self.response, user_input).run(story)
+        await ChatCommand(self.chains, self.response, user_input.text()).run(story)
 
 
 class RewindCommand(Command):
@@ -106,15 +88,15 @@ class RewindCommand(Command):
 
 class FixCommand(Command):
     def __init__(
-        self, chains: Chains, prompts: Prompts, response: Response, instruction: str
+        self, chains: Chains, fix_prompt: str, response: Response, instruction: str
     ):
         self.chains = chains
         self.response = response
         self.instruction = instruction
-        self.prompts = prompts
+        self.fix_prompt = fix_prompt
 
     async def fix_message(self, story: Story, instruction: str) -> List[BaseMessage]:
-        user_input = self.prompts.fix_prompt.format(instruction=instruction)
+        user_input = self.fix_prompt.format(instruction=instruction)
 
         return await run_chat(
             self.chains.chat_chain,
@@ -142,7 +124,7 @@ class ReplaceCommand(Command):
         self.response = response
         self.text = text
 
-    async def run(self, story: Story):
+    async def run(self, story: Story) -> None:
         if len(story.current_messages) < 1:
             raise CommandError("There is no message to rewrite!")
 
@@ -209,7 +191,7 @@ class SummarizeCommand(Command):
         )
         return response.characters
 
-    async def run(self, story: Story):
+    async def run(self, story: Story) -> None:
         if count_tokens_approximately(story.current_messages) > self.max_tokens:
             msg_count = len(story.current_messages)
             scene_count = len(story.scenes)
@@ -264,7 +246,7 @@ class CloseChapterCommand(Command):
             f"📖 Closed chapter {len(story.chapters)}: {response.title}"
         )
 
-    async def run(self, story: Story):
+    async def run(self, story: Story) -> None:
         await SummarizeCommand(self.chains, self.summary_response, 0, 0).run(story)
         await self.close_chapter(story)
 
@@ -281,7 +263,7 @@ class GenerateCharactersCommand(Command):
         )
         return response.characters
 
-    async def run(self, story: Story):
+    async def run(self, story: Story) -> None:
         characters = await self.make_characters(self.prompt)
         story.characters = characters
         await self.response.send_message(

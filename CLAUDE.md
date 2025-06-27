@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Install dependencies: `uv sync`
 - Run main CLI chatbot: `python chatbot.py`
 - Run quickrun utility: `python quickrun.py -p <provider> [-t chat|single] [-f prompt_file] [-m model]`
+- lint and format: `ruff check --fix` and `ruff format`
 - Run Discord bot: `python discordbot.py`
 
 ### Environment Variables

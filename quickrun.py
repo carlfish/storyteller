@@ -79,7 +79,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     args: argparse.Namespace = parse_args()
     model = init_model(args)
     prompt = load_file(args.file)

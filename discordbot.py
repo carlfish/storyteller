@@ -132,7 +132,7 @@ story_commands: dict[str, bot_commands.BotCommand] = {
     "s": bot_commands.WriteStoryCommand(),
     "retry": bot_commands.RetryCommand(),
     "rewind": bot_commands.RewindCommand(),
-    "fix": bot_commands.FixCommand(),
+    "fix": bot_commands.FixCommand(fix_prompt=prompts.fix_prompt),
     "replace": bot_commands.ReplaceCommand(),
     "chapter": bot_commands.CloseChapterCommand(),
     "about": bot_commands.AboutCommand(model.model_name),

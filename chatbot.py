@@ -121,7 +121,7 @@ def main():
                 instruction = re.sub("^fix:?", "", user_input).strip()
                 cmd = FixCommand(
                     chains,
-                    prompts=context.prompts,
+                    fix_prompt=context.prompts.fix_prompt,
                     response=response,
                     instruction=instruction,
                 )

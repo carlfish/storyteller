@@ -140,7 +140,7 @@ def parse_command(
     elif cmd_name == "rewind":
         return c.RewindCommand(chains, response=response)
     elif cmd_name == "fix":
-        return c.FixCommand(chains, response=response, instruction=body)
+        return c.FixCommand(chains, fix_prompt=prompts.fix_prompt, response=response, instruction=body)
     elif cmd_name == "replace":
         return c.ReplaceCommand(response=response, text=body)
     elif cmd_name == "chapter":

@@ -1,14 +1,16 @@
 from abc import ABC, abstractmethod
 import discord
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
+import storyteller.engine
 import storyteller.commands
 import uuid
 from storyteller.models import Story, Character
 from io import StringIO
 from textwrap import fill, dedent
+from typing import Callable
 
 
-class NoOpResponse(storyteller.commands.Response):
+class NoOpResponse(storyteller.engine.Response):
     async def send_message(
         self, content: str, file: discord.File | None = None
     ) -> None:
@@ -24,7 +26,7 @@ class NoOpResponse(storyteller.commands.Response):
         pass
 
 
-class DiscordResponse(storyteller.commands.Response):
+class DiscordResponse(storyteller.engine.Response):
     @classmethod
     def to_channel(cls, message: discord.Message) -> "DiscordResponse":
         return cls(message.channel)
@@ -47,7 +49,7 @@ class DiscordResponse(storyteller.commands.Response):
     async def start_stream(self) -> None:
         self.stream_message = await self.channel.send("⌛ Thinking...")
         self.stream_content = ""
-        self.last_update_time = discord.utils.utcnow().timestamp()
+        self.last_update_time = int(discord.utils.utcnow().timestamp())
 
     async def append(self, content: str) -> None:
         if self.stream_message is None:
@@ -55,7 +57,7 @@ class DiscordResponse(storyteller.commands.Response):
         self.stream_content += content
 
         # Only update if 5 seconds have passed since last update
-        current_time = discord.utils.utcnow().timestamp()
+        current_time = int(discord.utils.utcnow().timestamp())
         if current_time - self.last_update_time >= 5:
             await self.stream_message.edit(content=self.stream_content)
             self.last_update_time = current_time
@@ -142,7 +144,7 @@ class NewStoryCommand(BotCommand):
 
     def __init__(
         self,
-        set_channel_story: callable,
+        set_channel_story: Callable,
         story_repository: FileStoryRepository,
         chargen_prompt: str,
     ):
@@ -228,12 +230,21 @@ class RewindCommand(BotCommand):
 
 
 class FixCommand(BotCommand):
-    help_text = "- Do not use this command."
+    help_text = "[instructions] - fix the last storyteller response according to the instructions."
+
+    def __init__(self, fix_prompt: str):
+        self.fix_prompt = fix_prompt
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
         response = DiscordResponse.to_channel(ctx.message)
         await ctx.story_engine.run_command(
-            ctx.story_id, storyteller.commands.FixCommand(ctx.chains, response, args)
+            ctx.story_id,
+            storyteller.commands.FixCommand(
+                ctx.chains,
+                fix_prompt=self.fix_prompt,
+                response=response,
+                instruction=args,
+            ),
         )
 
 
@@ -311,7 +322,7 @@ class AboutCommand(BotCommand):
 class YoloCommand(BotCommand):
     help_text = "[on|off] - when yolo mode is on, all messages that are not ~ooc are treated as storyteller messages."
 
-    def __init__(self, set_channel_yolo: callable, get_channel_yolo: callable):
+    def __init__(self, set_channel_yolo: Callable, get_channel_yolo: Callable):
         self.set_channel_yolo = set_channel_yolo
         self.get_channel_yolo = get_channel_yolo
 

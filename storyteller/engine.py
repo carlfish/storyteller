@@ -114,7 +114,7 @@ class StoryLocked(Exception):
 
 class FileStoryRepository(StoryRepository):
     locklock = Lock()
-    locks = {}
+    locks: dict[str, bool] = {}
 
     def __init__(self, repo_dir: str):
         self.repo_dir = repo_dir
@@ -145,20 +145,10 @@ class FileStoryRepository(StoryRepository):
             f.write(story.model_dump_json(indent=2))
 
 
-class Command[T]:
-    def run(story: Story) -> T:
-        pass
-
-
-class OutputSink(ABC):
+class Command(ABC):
     @abstractmethod
-    def write_message(self, text: str) -> None:
+    async def run(self, story: Story) -> None:
         pass
-
-    @abstractmethod
-    def start_(self, text: str) -> None:
-        pass
-
 
 class StoryEngine:
     def __init__(self, story_repository: StoryRepository):
@@ -173,8 +163,25 @@ class StoryEngine:
         finally:
             self.story_repository.unlock(story_id)
 
+class Response(ABC):
+    @abstractmethod
+    async def send_message(self, msg: str):
+        pass
+
+    @abstractmethod
+    async def start_stream(self):
+        pass
+
+    @abstractmethod
+    async def end_stream(self):
+        pass
+
+    @abstractmethod
+    async def append(self, msg: str):
+        pass
 
 # Helper functions
+
 
 
 async def run_chat(
@@ -182,9 +189,10 @@ async def run_chat(
     context: dict,
     current_messages: List[BaseMessage],
     user_input: str,
-    response: OutputSink,
+    response: Response,
 ) -> List[BaseMessage]:
     chunks = []
+
     await response.start_stream()
 
     async for chunk in chat_chain.astream(
@@ -199,11 +207,12 @@ async def run_chat(
 
     await response.end_stream()
 
+    merged: list[BaseMessage] = []
     if len(chunks) > 0 and all(isinstance(chunk, AIMessageChunk) for chunk in chunks):
         merged = [add_ai_message_chunks(*chunks)]
     else:
-        merged = merge_message_runs(
+        merged = [merge_message_runs(
             chunks, chunk_separator=""
-        )  # juts in case, but the output will probably be wonky
+        )]  # juts in case, but the output will probably be wonky
 
     return merged
