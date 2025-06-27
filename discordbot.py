@@ -6,7 +6,8 @@ import storyteller.commands
 import re
 import os
 import json
-from storyteller.models import *
+from storyteller.models import Prompts
+from pydantic import BaseModel
 from threading import Lock
 from dotenv import load_dotenv
 import bot.commands as bot_commands
@@ -19,13 +20,15 @@ intents.message_content = True
 
 client = discord.Client(intents=intents)
 
-COMMAND_REGEX = re.compile(r'^~(\w+)(?:\s+)?([\s\S]*)$', re.MULTILINE)
+COMMAND_REGEX = re.compile(r"^~(\w+)(?:\s+)?([\s\S]*)$", re.MULTILINE)
 HISTORY_MIN_TOKENS = int(os.getenv("HISTORY_MIN_TOKENS", "1024"))
 HISTORY_MAX_TOKENS = int(os.getenv("HISTORY_MAX_TOKENS", "4096"))
 
 STORE_DIR = os.path.expanduser("~/story_repo")
 PROMPT_DIR = os.getenv("PROMPT_DIR", "prompts/storyteller/prompts")
 STORY_DIR = os.getenv("STORY_DIR", "prompts/storyteller/stories/genfantasy")
+
+
 class ChannelConfig(BaseModel):
     @classmethod
     def new(cls, story_id: str) -> "ChannelConfig":
@@ -34,8 +37,10 @@ class ChannelConfig(BaseModel):
     story_id: str | None
     yolo_mode: bool
 
+
 class ChannelConfigs(BaseModel):
     channel: dict[str, ChannelConfig]
+
 
 class ChannelConfigRegistry:
     REGFILE = "channel_configs.json"
@@ -66,18 +71,21 @@ class ChannelConfigRegistry:
             channels.channel[channel_id] = config
             self._save(channels)
 
-prompts=Prompts(
-            base_prompt=load_file(f"{PROMPT_DIR}/base_prompt.md"),
-            fix_prompt=load_file(f"{PROMPT_DIR}/fix_prompt.md"),
-            scene_summary_prompt=load_file(f"{PROMPT_DIR}/summary_prompt.md"),
-            chapter_summary_prompt=load_file(f"{PROMPT_DIR}/chapter_summary_prompt.md"),
-            character_summary_prompt=load_file(f"{PROMPT_DIR}/character_summary_prompt.md"),
-            character_creation_prompt=load_file(f"{PROMPT_DIR}/character_create_prompt.md")
-        )
+
+prompts = Prompts(
+    base_prompt=load_file(f"{PROMPT_DIR}/base_prompt.md"),
+    fix_prompt=load_file(f"{PROMPT_DIR}/fix_prompt.md"),
+    scene_summary_prompt=load_file(f"{PROMPT_DIR}/summary_prompt.md"),
+    chapter_summary_prompt=load_file(f"{PROMPT_DIR}/chapter_summary_prompt.md"),
+    character_summary_prompt=load_file(f"{PROMPT_DIR}/character_summary_prompt.md"),
+    character_creation_prompt=load_file(f"{PROMPT_DIR}/character_create_prompt.md"),
+)
+
 
 @client.event
 async def on_ready():
-    print(f'Logged in as {client.user}')
+    print(f"Logged in as {client.user}")
+
 
 model_name, model_provider = pick_model()
 model = init_chat_model(model=model_name, model_provider=model_provider)
@@ -88,13 +96,15 @@ chains = Chains(model, prompts)
 
 channel_configs = ChannelConfigRegistry(STORE_DIR)
 
+
 def set_channel_story(channel_id: str, story_id: str) -> None:
     cfg = channel_configs.get_config(channel_id)
     if cfg is None:
         cfg = ChannelConfig.new(story_id)
     else:
-        cfg.story_id = story_id        
+        cfg.story_id = story_id
     channel_configs.save_config(channel_id, cfg)
+
 
 def set_channel_yolo(channel_id: str, yolo_mode: bool) -> None:
     cfg = channel_configs.get_config(channel_id)
@@ -104,16 +114,20 @@ def set_channel_yolo(channel_id: str, yolo_mode: bool) -> None:
     cfg.yolo_mode = yolo_mode
     channel_configs.save_config(channel_id, cfg)
 
+
 def get_channel_yolo(channel_id: str) -> bool:
     cfg = channel_configs.get_config(channel_id)
     if cfg is None:
         return False
     return cfg.yolo_mode
 
+
 chargen_prompt = load_file(f"{STORY_DIR}/chargen.md")
 
 story_commands: dict[str, bot_commands.BotCommand] = {
-    "newstory": bot_commands.NewStoryCommand(set_channel_story, story_repository, chargen_prompt), 
+    "newstory": bot_commands.NewStoryCommand(
+        set_channel_story, story_repository, chargen_prompt
+    ),
     "s": bot_commands.WriteStoryCommand(),
     "retry": bot_commands.RetryCommand(),
     "rewind": bot_commands.RewindCommand(),
@@ -128,7 +142,9 @@ story_commands: dict[str, bot_commands.BotCommand] = {
 story_commands["help"] = bot_commands.HelpCommand(story_commands)
 
 no_story_commands: dict[str, bot_commands.BotCommand] = {
-    "newstory": bot_commands.NewStoryCommand(set_channel_story, story_repository, chargen_prompt),
+    "newstory": bot_commands.NewStoryCommand(
+        set_channel_story, story_repository, chargen_prompt
+    ),
     "yolo": bot_commands.YoloCommand(set_channel_yolo, get_channel_yolo),
     "about": bot_commands.AboutCommand(model.model_name),
 }
@@ -139,10 +155,22 @@ dm_commands: dict[str, bot_commands.BotCommand] = {
 }
 dm_commands["help"] = bot_commands.HelpCommand(story_commands)
 
-async def _run_summary(story_id: str | None, story_engine: StoryEngine, chains: Chains, channel: discord.TextChannel) -> None:
+
+async def _run_summary(
+    story_id: str | None,
+    story_engine: StoryEngine,
+    chains: Chains,
+    channel: discord.TextChannel,
+) -> None:
     if story_id:
         response = bot_commands.SummaryDiscordResponse(channel)
-        await story_engine.run_command(story_id, storyteller.commands.SummarizeCommand(chains, response, HISTORY_MIN_TOKENS, HISTORY_MAX_TOKENS))
+        await story_engine.run_command(
+            story_id,
+            storyteller.commands.SummarizeCommand(
+                chains, response, HISTORY_MIN_TOKENS, HISTORY_MAX_TOKENS
+            ),
+        )
+
 
 @client.event
 async def on_message(message):
@@ -151,7 +179,7 @@ async def on_message(message):
         return
 
     channel_id = str(message.channel.id)
-    
+
     try:
         if isinstance(message.channel, discord.DMChannel):
             cmd_dict = dm_commands
@@ -173,7 +201,9 @@ async def on_message(message):
             args = match.group(2).strip()
 
             if command in cmd_dict:
-                ctx = bot_commands.CommandContext(story_id, message, story_engine, chains)
+                ctx = bot_commands.CommandContext(
+                    story_id, message, story_engine, chains
+                )
                 await cmd_dict[command].execute(ctx, args)
                 await _run_summary(story_id, story_engine, chains, message.channel)
         elif cfg and cfg.yolo_mode:
@@ -183,5 +213,6 @@ async def on_message(message):
     except Exception as e:
         await message.channel.send(f"Error: {e}")
         raise e
+
 
 client.run(os.getenv("DISCORD_TOKEN"))

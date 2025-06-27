@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Optional, Dict, Any
+from typing import Optional
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -8,7 +8,9 @@ from langchain.chat_models import init_chat_model
 
 from storyteller.models import Story
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
-from storyteller import commands as c # Aliased to avoid clash with Response from fastapi
+from storyteller import (
+    commands as c,
+)  # Aliased to avoid clash with Response from fastapi
 from storyteller.common import load_file, pick_model
 
 load_dotenv()
@@ -30,100 +32,105 @@ prompts = c.Prompts(
     scene_summary_prompt=load_file(f"{PROMPT_DIR}/summary_prompt.md"),
     chapter_summary_prompt=load_file(f"{PROMPT_DIR}/chapter_summary_prompt.md"),
     character_summary_prompt=load_file(f"{PROMPT_DIR}/character_summary_prompt.md"),
-    character_creation_prompt=load_file(f"{PROMPT_DIR}/character_create_prompt.md")
+    character_creation_prompt=load_file(f"{PROMPT_DIR}/character_create_prompt.md"),
 )
 
 chains = Chains(model=model, prompts=prompts)
 repo = FileStoryRepository(repo_dir=os.path.expanduser("~/story_repo"))
 engine = StoryEngine(story_repository=repo)
 
+
 class CommandRequest(BaseModel):
     command: str
     body: Optional[str] = None
 
+
 class CreateStoryRequest(BaseModel):
     characters: str
+
 
 class APIResponse(c.Response):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.messages = []
-    
+
     async def send_message(self, msg: str):
         self.messages.append(msg)
-    
+
     async def start_stream(self):
         self.messages.append("")
-    
+
     async def end_stream(self):
         pass
-    
+
     async def append(self, msg: str):
         if self.messages:
             self.messages[-1] += msg
         else:
             self.messages.append(msg)
 
+
 def make_characters(descriptions: str):
     return chains.character_create_chain.invoke({"characters": descriptions}).characters
+
 
 @app.post("/stories")
 async def create_story(request: CreateStoryRequest):
     """Create a new story and return redirect to its UUID endpoint"""
     story_uuid = str(uuid.uuid4())
-    
+
     story = Story.new()
     story.characters = make_characters(descriptions=request.characters)
-    
+
     repo.save(story_uuid, story)
-    
+
     return Response(
-        content="",
-        status_code=201,
-        headers={"Location": f"/stories/{story_uuid}"}
+        content="", status_code=201, headers={"Location": f"/stories/{story_uuid}"}
     )
+
 
 @app.get("/stories/{story_uuid}")
 async def get_story(story_uuid: str):
     """Get the full story state"""
     if not repo.story_exists(story_uuid):
         raise HTTPException(status_code=404, detail="Story not found")
-    
+
     story = repo.load(story_uuid)
     return story.model_dump()
+
 
 @app.post("/stories/{story_uuid}")
 async def execute_command(story_uuid: str, command_request: CommandRequest):
     """Execute a command on the story"""
     if not repo.story_exists(story_uuid):
         raise HTTPException(status_code=404, detail="Story not found")
-    
+
     response = APIResponse()
-    
+
     try:
         cmd = parse_command(command_request, chains, response)
         await engine.run_command(story_uuid, cmd)
         summarize_cmd = c.SummarizeCommand(
-            chains, 
-            response=response, 
-            min_tokens=HISTORY_MIN_TOKENS, 
-            max_tokens=HISTORY_MAX_TOKENS
+            chains,
+            response=response,
+            min_tokens=HISTORY_MIN_TOKENS,
+            max_tokens=HISTORY_MAX_TOKENS,
         )
         await engine.run_command(story_uuid, summarize_cmd)
-        
-        return {
-            "status": "success",
-            "messages": response.messages
-        }
-        
+
+        return {"status": "success", "messages": response.messages}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-def parse_command(command_request: CommandRequest, chains: Chains, response: APIResponse):
+
+def parse_command(
+    command_request: CommandRequest, chains: Chains, response: APIResponse
+):
     """Parse command request into appropriate Command object"""
     cmd_name = command_request.command.lower()
     body = command_request.body or ""
-    
+
     if cmd_name == "chat":
         return c.ChatCommand(chains, response=response, user_input=body)
     elif cmd_name == "retry":
@@ -135,10 +142,17 @@ def parse_command(command_request: CommandRequest, chains: Chains, response: API
     elif cmd_name == "rewrite":
         return c.RewriteCommand(response=response, text=body)
     elif cmd_name == "chapter":
-        return c.CloseChapterCommand(chains, summary_response=response, chapter_response=response, chapter_title=body)
+        return c.CloseChapterCommand(
+            chains,
+            summary_response=response,
+            chapter_response=response,
+            chapter_title=body,
+        )
     else:
         raise ValueError(f"Unknown command: {cmd_name}")
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host=HTTP_HOST, port=HTTP_PORT)

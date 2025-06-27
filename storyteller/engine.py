@@ -1,10 +1,14 @@
 from abc import ABC, abstractmethod
 from langchain_core.chat_history import BaseMessage, BaseChatMessageHistory
 from langchain_core.language_models.base import BaseLanguageModel
-from langchain_core.prompts import PromptTemplate, ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import (
+    PromptTemplate,
+    ChatPromptTemplate,
+    MessagesPlaceholder,
+)
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
-from .models import *
+from .models import Story, Scenes, Chapter, Characters, Prompts
 
 from pydantic import BaseModel
 from typing import List, Sequence, TypeVar
@@ -13,6 +17,7 @@ from threading import Lock
 import os
 
 _BM = TypeVar("_BM", bound=BaseModel)
+
 
 class StoryBackedMessageHistory(BaseChatMessageHistory):
     def __init__(self, story: Story):
@@ -35,31 +40,49 @@ class StoryBackedMessageHistory(BaseChatMessageHistory):
     def clear(self) -> None:
         self.messages = []
 
+
 def make_chat_chain(llm: BaseLanguageModel, base_prompt: str):
     # Create a prompt template
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", base_prompt),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}")
-    ])
-    
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", base_prompt),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+
     # Create the chain
     return prompt | llm
-        
+
+
 def make_basic_chain(model: BaseLanguageModel, prompt: str):
     return PromptTemplate.from_template(prompt) | model
 
-def make_structured_chain(model: BaseLanguageModel, prompt: str, output_format: type[_BM]):    
-    return PromptTemplate.from_template(prompt) | model.with_structured_output(output_format, method="json_schema")
+
+def make_structured_chain(
+    model: BaseLanguageModel, prompt: str, output_format: type[_BM]
+):
+    return PromptTemplate.from_template(prompt) | model.with_structured_output(
+        output_format, method="json_schema"
+    )
+
 
 class Chains:
     def __init__(self, model: BaseLanguageModel, prompts: Prompts):
         self.naked_chat_chain = make_chat_chain(model, prompts.base_prompt)
-        self.summary_chain = make_structured_chain(model, prompts.scene_summary_prompt, Scenes)
+        self.summary_chain = make_structured_chain(
+            model, prompts.scene_summary_prompt, Scenes
+        )
         self.fix_chain = make_basic_chain(model, prompts.fix_prompt)
-        self.chapter_chain = make_structured_chain(model, prompts.chapter_summary_prompt, Chapter)
-        self.character_bio_chain = make_structured_chain(model, prompts.character_summary_prompt, Characters)
-        self.character_create_chain = make_structured_chain(model, prompts.character_creation_prompt, Characters)
+        self.chapter_chain = make_structured_chain(
+            model, prompts.chapter_summary_prompt, Chapter
+        )
+        self.character_bio_chain = make_structured_chain(
+            model, prompts.character_summary_prompt, Characters
+        )
+        self.character_create_chain = make_structured_chain(
+            model, prompts.character_creation_prompt, Characters
+        )
 
     def chat_chain(self, story: Story):
         def get_session_history():
@@ -72,6 +95,7 @@ class Chains:
             input_messages_key="input",
             history_messages_key="chat_history",
         )
+
 
 class StoryRepository(ABC):
     @abstractmethod
@@ -94,8 +118,10 @@ class StoryRepository(ABC):
     def save(self, story_id: str, story: Story) -> None:
         pass
 
+
 class StoryLocked(Exception):
     pass
+
 
 class FileStoryRepository(StoryRepository):
     locklock = Lock()
@@ -129,9 +155,11 @@ class FileStoryRepository(StoryRepository):
         with open(self._repofile(story_id), "w") as f:
             f.write(story.model_dump_json(indent=2))
 
+
 class Command[T]:
     def run(story: Story) -> T:
         pass
+
 
 class OutputSink(ABC):
     @abstractmethod
@@ -141,6 +169,7 @@ class OutputSink(ABC):
     @abstractmethod
     def start_(self, text: str) -> None:
         pass
+
 
 class StoryEngine:
     def __init__(self, story_repository: StoryRepository):

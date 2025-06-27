@@ -2,7 +2,7 @@
 name = "chatbot"
 version = "0.1.0"
 description = "A chatbot using LangChain and Ollama"
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 dependencies = [
     "langchain>=0.3.23",
     "langchain-ollama>=0.0.1",
@@ -16,6 +16,12 @@ dependencies = [
     "discord-py>=2.5.2",
     "fastapi>=0.104.0",
     "uvicorn>=0.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7.0",
+    "mypy>=1.8.0",
 ]
 
 [build-system]

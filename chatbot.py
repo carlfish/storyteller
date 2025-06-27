@@ -2,13 +2,23 @@ import re
 from typing import List
 from langchain.chat_models import init_chat_model
 from dotenv import load_dotenv
-from storyteller.models import *
+from storyteller.models import Context, Prompts, Story, Character
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains
-from storyteller.commands import *
+from storyteller.commands import (
+    Response,
+    RetryCommand,
+    RewindCommand,
+    FixCommand,
+    RewriteCommand,
+    CloseChapterCommand,
+    ChatCommand,
+    SummarizeCommand,
+)
 from storyteller.common import load_file, pick_model
 import os
 import logging
 import asyncio
+
 load_dotenv()
 
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
@@ -30,20 +40,22 @@ def init_context(prompt_dir: str):
             fix_prompt=load_file(f"{prompt_dir}/fix_prompt.md"),
             scene_summary_prompt=load_file(f"{prompt_dir}/summary_prompt.md"),
             chapter_summary_prompt=load_file(f"{prompt_dir}/chapter_summary_prompt.md"),
-            character_summary_prompt=load_file(f"{prompt_dir}/character_summary_prompt.md"),
-            character_creation_prompt=load_file(f"{prompt_dir}/character_create_prompt.md")
+            character_summary_prompt=load_file(
+                f"{prompt_dir}/character_summary_prompt.md"
+            ),
+            character_creation_prompt=load_file(
+                f"{prompt_dir}/character_create_prompt.md"
+            ),
         ),
         story=Story(
-            characters=[],
-            chapters=[],
-            scenes=[],
-            current_messages=[],
-            old_messages=[]
-        )
+            characters=[], chapters=[], scenes=[], current_messages=[], old_messages=[]
+        ),
     )
+
 
 def make_characters(chain, descriptions: str) -> List[Character]:
     return chain.invoke({"characters": descriptions}).characters
+
 
 class StdoutResponse(Response):
     async def send_message(self, msg: str):
@@ -58,7 +70,8 @@ class StdoutResponse(Response):
     async def append(self, msg: str):
         print(msg, end="", flush=True)
 
-def main():    
+
+def main():
     prompt_dir = os.getenv("PROMPT_DIR", "prompts/storyteller/prompts")
     story_dir = os.getenv("STORY_DIR", "prompts/storyteller/stories/genfantasy")
 
@@ -71,26 +84,28 @@ def main():
 
     if not repo.story_exists(STORYTELLER_CLI_STORY):
         init_chars = load_file(f"{story_dir}/chargen.md")
-        context.story.characters = make_characters(chains.character_create_chain, descriptions=init_chars)
+        context.story.characters = make_characters(
+            chains.character_create_chain, descriptions=init_chars
+        )
         repo.save(STORYTELLER_CLI_STORY, context.story)
 
     engine = StoryEngine(story_repository=repo)
 
     preview_story = repo.load(STORYTELLER_CLI_STORY)
     story_id = STORYTELLER_CLI_STORY
-    if (len(preview_story.current_messages) > 0):
+    if len(preview_story.current_messages) > 0:
         print(f"Last message:\n\n{preview_story.current_messages[-1].content}\n\n")
 
     response = StdoutResponse()
 
     print("Chatbot initialized. Type 'quit' to exit.")
     print("You can start chatting now!")
-        
-    while True:    
+
+    while True:
         try:
             user_input = input("\nYou: ")
             print()
-            if user_input.lower() == 'quit':
+            if user_input.lower() == "quit":
                 print("\nGoodbye!")
                 break
             elif user_input.lower() == "retry":
@@ -105,20 +120,36 @@ def main():
                 cmd = RewriteCommand(response=response, text=text)
             elif user_input.startswith("chapter"):
                 title = re.sub("^chapter:?", "", user_input).strip()
-                cmd = CloseChapterCommand(chains, summary_response=response, chapter_response=response, chapter_title=title)
+                cmd = CloseChapterCommand(
+                    chains,
+                    summary_response=response,
+                    chapter_response=response,
+                    chapter_title=title,
+                )
             else:
                 cmd = ChatCommand(chains, response=response, user_input=user_input)
-                
+
             # summarize after running command so that we don't accidentally summarize something that
             # needs replaying/rewriting.
             try:
                 asyncio.run(engine.run_command(story_id, cmd))
-                asyncio.run(engine.run_command(story_id, SummarizeCommand(chains, response=response, min_tokens=HISTORY_MIN_TOKENS, max_tokens=HISTORY_MAX_TOKENS)))
+                asyncio.run(
+                    engine.run_command(
+                        story_id,
+                        SummarizeCommand(
+                            chains,
+                            response=response,
+                            min_tokens=HISTORY_MIN_TOKENS,
+                            max_tokens=HISTORY_MAX_TOKENS,
+                        ),
+                    )
+                )
             except Exception as e:
                 print(f"Something went wrong: {e}")
         except KeyboardInterrupt:
             print("\nGoodbye!")
             break
+
 
 if __name__ == "__main__":
     main()
