@@ -95,10 +95,11 @@ class FixCommand(Command):
         self.instruction = instruction
         self.fix_prompt = fix_prompt
 
-    async def fix_message(self, story: Story, instruction: str) -> List[BaseMessage]:
-        user_input = self.fix_prompt.format(instruction=instruction)
+    async def run(self, story: Story):
+        if len(story.current_messages) < 1:
+            raise CommandError("There is no message to fix!")
 
-        return await run_chat(
+        fixed = await run_chat(
             self.chains.chat_chain,
             {
                 "characters": story.characters,
@@ -106,15 +107,10 @@ class FixCommand(Command):
                 "chapters": _make_chapters(story.chapters),
             },
             story.current_messages,
-            user_input,
+            self.fix_prompt.format(instruction=self.instruction),
             self.response,
         )
 
-    async def run(self, story: Story):
-        if len(story.current_messages) < 1:
-            raise CommandError("There is no message to fix!")
-
-        fixed = await self.fix_message(story, self.instruction)
         story.current_messages.pop()
         story.current_messages.extend(fixed)
 

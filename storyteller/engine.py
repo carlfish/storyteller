@@ -182,8 +182,6 @@ class Response(ABC):
 
 # Helper functions
 
-
-
 async def run_chat(
     chat_chain: Runnable,
     context: dict,
@@ -211,8 +209,8 @@ async def run_chat(
     if len(chunks) > 0 and all(isinstance(chunk, AIMessageChunk) for chunk in chunks):
         merged = [add_ai_message_chunks(*chunks)]
     else:
-        merged = [merge_message_runs(
+        merged = merge_message_runs(
             chunks, chunk_separator=""
-        )]  # juts in case, but the output will probably be wonky
+        )  # just in case, but the output will probably be wonky
 
     return merged
