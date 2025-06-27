@@ -237,13 +237,13 @@ class FixCommand(BotCommand):
         )
 
 
-class RewriteCommand(BotCommand):
+class ReplaceCommand(BotCommand):
     help_text = "[text] - replace the last storyteller response with the provided text."
 
     async def execute(self, ctx: CommandContext, args: str) -> None:
         response = DiscordResponse.to_channel(ctx.message)
         await ctx.story_engine.run_command(
-            ctx.story_id, storyteller.commands.RewriteCommand(response, args)
+            ctx.story_id, storyteller.commands.ReplaceCommand(response, args)
         )
 
 

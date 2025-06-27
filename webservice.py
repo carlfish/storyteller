@@ -141,8 +141,8 @@ def parse_command(
         return c.RewindCommand(chains, response=response)
     elif cmd_name == "fix":
         return c.FixCommand(chains, response=response, instruction=body)
-    elif cmd_name == "rewrite":
-        return c.RewriteCommand(response=response, text=body)
+    elif cmd_name == "replace":
+        return c.ReplaceCommand(response=response, text=body)
     elif cmd_name == "chapter":
         return c.CloseChapterCommand(
             chains,

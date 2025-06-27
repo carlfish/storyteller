@@ -117,10 +117,10 @@ Apply a correction to the last AI response.
 - **Body**: Instructions for how to fix the response
 - **Example**: `{"command": "fix", "body": "Make the character more friendly"}`
 
-### rewrite
+### replace
 Replace the last AI response with new text.
 - **Body**: New text to replace the last response
-- **Example**: `{"command": "rewrite", "body": "The knight smiled warmly."}`
+- **Example**: `{"command": "replace", "body": "The knight smiled warmly."}`
 
 ### chapter
 Close the current chapter and start a new one.

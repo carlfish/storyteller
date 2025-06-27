@@ -1,6 +1,6 @@
 from typing import List
 from .engine import Command, Chains, run_chat
-from .models import Character, Scenes, Story, Chapter, Characters, Scene
+from .models import Character, Scenes, Story, Chapter, Characters, Scene, Prompts
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 from langchain_core.messages.utils import count_tokens_approximately
 from abc import ABC, abstractmethod
@@ -28,28 +28,29 @@ class Response(ABC):
         pass
 
 
+def _make_chapters(chapters: List[Chapter]):
+    summary = ""
+    for idx, chapter in enumerate(chapters):
+        summary = (
+            summary + f"## Chapter {idx + 1}: {chapter.title}\n {chapter.summary}\n\n"
+        )
+
+    return summary
+
+
+def _make_scenes(scenes: List[Scene]):
+    summary = ""
+    for idx, scene in enumerate(scenes):
+        summary = summary + f"### {scene.time_and_location}\n{scene.events}\n\n"
+
+    return summary
+
+
 class ChatCommand(Command[None]):
     def __init__(self, chains: Chains, response: Response, user_input: str):
         self.chains: Chains = chains
         self.response: Response = response
         self.user_input: str = user_input
-
-    def _make_chapters(self, chapters: List[Chapter]):
-        summary = ""
-        for idx, chapter in enumerate(chapters):
-            summary = (
-                summary
-                + f"## Chapter {idx + 1}: {chapter.title}\n {chapter.summary}\n\n"
-            )
-
-        return summary
-
-    def _make_scenes(self, scenes: List[Scene]):
-        summary = ""
-        for idx, scene in enumerate(scenes):
-            summary = summary + f"### {scene.time_and_location}\n{scene.events}\n\n"
-
-        return summary
 
     async def run(self, story: Story) -> None:
         chat_chain = self.chains.chat_chain
@@ -57,8 +58,8 @@ class ChatCommand(Command[None]):
             chat_chain=chat_chain,
             context={
                 "characters": story.characters,
-                "scenes": f"## Chapter {len(story.chapters) + 1}\n\n {self._make_scenes(story.scenes)}",
-                "chapters": self._make_chapters(story.chapters),
+                "scenes": f"## Chapter {len(story.chapters) + 1}\n\n {_make_scenes(story.scenes)}",
+                "chapters": _make_chapters(story.chapters),
             },
             current_messages=story.current_messages,
             user_input=self.user_input,
@@ -104,38 +105,39 @@ class RewindCommand(Command):
 
 
 class FixCommand(Command):
-    def __init__(self, chains: Chains, response: Response, instruction: str):
+    def __init__(
+        self, chains: Chains, prompts: Prompts, response: Response, instruction: str
+    ):
         self.chains = chains
         self.response = response
         self.instruction = instruction
+        self.prompts = prompts
 
-    async def fix_message(self, message: str, instruction: str):
-        print("\n[Fixing…] " + instruction)
-        fixed = ""
-        await self.response.start_stream()
+    async def fix_message(self, story: Story, instruction: str) -> List[BaseMessage]:
+        user_input = self.prompts.fix_prompt.format(instruction=instruction)
 
-        async for chunk in self.chains.fix_chain.astream(
+        return await run_chat(
+            self.chains.chat_chain,
             {
-                "message": message.text(),
-                "instruction": instruction,
-            }
-        ):
-            await self.response.append(chunk.content)
-            fixed = fixed + chunk.content
-
-        await self.response.end_stream()
-        return fixed
+                "characters": story.characters,
+                "scenes": f"## Chapter {len(story.chapters) + 1}\n\n {_make_scenes(story.scenes)}",
+                "chapters": _make_chapters(story.chapters),
+            },
+            story.current_messages,
+            user_input,
+            self.response,
+        )
 
     async def run(self, story: Story):
         if len(story.current_messages) < 1:
             raise CommandError("There is no message to fix!")
 
-        last_message = story.current_messages[-1]
-        fixed = await self.fix_message(last_message, self.instruction)
-        story.current_messages[-1] = AIMessage(fixed)
+        fixed = await self.fix_message(story, self.instruction)
+        story.current_messages.pop()
+        story.current_messages.extend(fixed)
 
 
-class RewriteCommand(Command):
+class ReplaceCommand(Command):
     def __init__(self, response: Response, text: str):
         self.response = response
         self.text = text

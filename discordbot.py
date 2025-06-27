@@ -132,8 +132,8 @@ story_commands: dict[str, bot_commands.BotCommand] = {
     "s": bot_commands.WriteStoryCommand(),
     "retry": bot_commands.RetryCommand(),
     "rewind": bot_commands.RewindCommand(),
-    # "fix": FixCommand(), -- Fix doesn't work well enough.
-    "rewrite": bot_commands.RewriteCommand(),
+    "fix": bot_commands.FixCommand(),
+    "replace": bot_commands.ReplaceCommand(),
     "chapter": bot_commands.CloseChapterCommand(),
     "about": bot_commands.AboutCommand(model.model_name),
     "yolo": bot_commands.YoloCommand(set_channel_yolo, get_channel_yolo),

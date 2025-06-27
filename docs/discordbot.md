@@ -88,7 +88,8 @@ All commands start with `~`:
 - `~s [text]` - Continue the story (also works in yolo mode without the command)
 - `~retry` - Retry the last interaction
 - `~rewind` - Go back in the conversation
-- `~rewrite [text]` - Rewrite specific text
+- `~fix [instructions]` - Regenerate the previous response according to the instructions
+- `~replace [text]` - Replace the previous response entirely
 - `~chapter [title]` - Start a new chapter
 - `~yolo` - Toggle yolo mode (responds to all messages without needing ~s)
 - `~ooc` - Send an out-of-character message

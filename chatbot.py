@@ -8,7 +8,7 @@ from storyteller.commands import (
     RetryCommand,
     RewindCommand,
     FixCommand,
-    RewriteCommand,
+    ReplaceCommand,
     CloseChapterCommand,
     ChatCommand,
     SummarizeCommand,
@@ -119,10 +119,15 @@ def main():
                 cmd = RewindCommand(chains, response=response)
             elif user_input.startswith("fix"):
                 instruction = re.sub("^fix:?", "", user_input).strip()
-                cmd = FixCommand(chains, response=response, instruction=instruction)
-            elif user_input.startswith("rewrite"):
-                text = re.sub("^rewrite:?", "", user_input).strip()
-                cmd = RewriteCommand(response=response, text=text)
+                cmd = FixCommand(
+                    chains,
+                    prompts=context.prompts,
+                    response=response,
+                    instruction=instruction,
+                )
+            elif user_input.startswith("replace"):
+                text = re.sub("^replace:?", "", user_input).strip()
+                cmd = ReplaceCommand(response=response, text=text)
             elif user_input.startswith("chapter"):
                 title = re.sub("^chapter:?", "", user_input).strip()
                 cmd = CloseChapterCommand(

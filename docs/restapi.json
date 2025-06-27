@@ -93,7 +93,7 @@
       },
       "post": {
         "summary": "Execute a command on the story",
-        "description": "Executes a storytelling command (chat, retry, rewind, fix, rewrite, chapter) on the specified story",
+        "description": "Executes a storytelling command (chat, retry, rewind, fix, replace, chapter) on the specified story",
         "parameters": [
           {
             "name": "story_uuid",
@@ -170,12 +170,12 @@
         "properties": {
           "command": {
             "type": "string",
-            "enum": ["chat", "retry", "rewind", "fix", "rewrite", "chapter"],
+            "enum": ["chat", "retry", "rewind", "fix", "replace", "chapter"],
             "description": "The command to execute on the story"
           },
           "body": {
             "type": "string",
-            "description": "Optional command body (required for chat, fix, rewrite, and chapter commands)",
+            "description": "Optional command body (required for chat, fix, replace, and chapter commands)",
             "example": "I walk into the tavern and order a drink"
           }
         }

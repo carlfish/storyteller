@@ -36,6 +36,6 @@ The main interactive CLI interface for the Storyteller chatbot.
   - `retry` to retry the last interaction
   - `rewind` to go back in the conversation
   - `fix [instructions]` to fix the last message
-  - `rewrite [text]` to rewrite specific text
+  - `replace [text]` to replace the last message
   - `chapter [title]` to start a new chapter
 - Stories are automatically saved to the repository for later continuation 
