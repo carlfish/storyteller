@@ -4,7 +4,7 @@ from langchain.chat_models import init_chat_model
 
 default_models = {
     "openai": "gpt-4.1-mini",
-    "anthropic": "claude-3-5-haiku-latest",
+    "anthropic": "claude-sonnet-4-0",
     "xai": "grok-3-latest",
     "google": "gemini-2.5-flash",
 }
@@ -51,8 +51,14 @@ def init_model(args: argparse.Namespace):
 
     if args.provider == "google":
         args.provider = "google_genai"
-
-    model = init_chat_model(
-        model=args.model, model_provider=args.provider, temperature=args.temperature
-    )
-    return model
+        
+    # Anthropic defaults to 1024 max response tokens, which is only about 800 words so you can hit
+    # token limits pretty easily.
+    if args.provider == "anthropic":
+        return init_chat_model(
+            model=args.model, model_provider=args.provider, temperature=args.temperature, max_tokens=4000
+        )
+    else:
+        return init_chat_model(
+            model=args.model, model_provider=args.provider, temperature=args.temperature
+        )

@@ -12,18 +12,6 @@ python webservice.py -p openai
 
 # Start with specific OpenAI model
 python webservice.py -p openai -m gpt-4
-
-# Start with Anthropic Claude
-python webservice.py -p anthropic -m claude-3-5-sonnet-latest
-
-# Start with XAI Grok
-python webservice.py -p xai -m grok-3-latest
-
-# Start with Google Gemini
-python webservice.py -p google -m gemini-2.5-flash
-
-# Start with Ollama
-python webservice.py -p ollama -m llama2
 ```
 
 ### Available Options

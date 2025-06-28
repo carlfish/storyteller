@@ -20,4 +20,5 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+tmpscripts/
 .DS_Store

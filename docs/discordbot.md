@@ -38,19 +38,7 @@ You can specify the AI model provider and model using command-line arguments:
 uv run python discordbot.py -p openai
 
 # Use OpenAI with specific model
-uv run python discordbot.py -p openai -m gpt-4
-
-# Use Anthropic Claude
-uv run python discordbot.py -p anthropic -m claude-3-5-sonnet-latest
-
-# Use XAI Grok
-uv run python discordbot.py -p xai -m grok-3-latest
-
-# Use Google Gemini
-uv run python discordbot.py -p google -m gemini-2.5-flash
-
-# Use Ollama with a local model
-uv run python discordbot.py -p ollama -m llama2
+uv run python discordbot.py -p openai --model gpt-4
 ```
 
 ### Available Options
@@ -70,7 +58,7 @@ uv run python discordbot.py -p ollama -m llama2
 
 - Optional model configuration:
   - `OPENAPI_MODEL`: OpenAI model name (default: "gpt-4.1-mini")
-  - `ANTHROPIC_MODEL`: Anthropic model name (default: "claude-3-5-haiku-latest")
+  - `ANTHROPIC_MODEL`: Anthropic model name (default: "claude-4.0-sonnet")
   - `XAI_MODEL`: XAI model name (default: "grok-3-latest")
   - `GOOGLE_MODEL`: Google model name (default: "gemini-2.5-flash")
 

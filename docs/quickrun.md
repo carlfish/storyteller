@@ -20,13 +20,6 @@ python quickrun.py [options]
 - `--model`: Override the default model for the provider
 - `-t, --temperature`: Temperature for model generation (default: 1.2)
 
-### Default Models
-
-If no model is specified, the following defaults are used:
-- OpenAI: gpt-4.1-mini
-- Anthropic: claude-3-5-haiku-latest
-- XAI: grok-3-latest
-
 ### Examples
 
 Run a single prompt with default OpenAI model:

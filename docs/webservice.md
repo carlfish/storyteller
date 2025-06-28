@@ -20,18 +20,6 @@ python webservice.py -p openai
 
 # Start with specific OpenAI model
 python webservice.py -p openai -m gpt-4
-
-# Start with Anthropic Claude
-python webservice.py -p anthropic -m claude-3-5-sonnet-latest
-
-# Start with XAI Grok
-python webservice.py -p xai -m grok-3-latest
-
-# Start with Google Gemini
-python webservice.py -p google -m gemini-2.5-flash
-
-# Start with Ollama
-python webservice.py -p ollama -m llama2
 ```
 
 ### Available Options
@@ -53,11 +41,11 @@ python webservice.py -p ollama -m llama2
 - `HISTORY_MIN_TOKENS`: Minimum tokens before summarization (default: 1024)
 - `HISTORY_MAX_TOKENS`: Maximum tokens before summarization (default: 4096)
 
-**LLM Provider (uses first available):**
-- `OPENAI_API_KEY`: OpenAI API key (uses gpt-4.1-mini by default)
-- `ANTHROPIC_API_KEY`: Anthropic API key (uses claude-3-5-haiku-latest by default)
-- `XAI_API_KEY`: XAI API key (uses grok-3-latest by default)
-- `GOOGLE_API_KEY`: Google AI API key (uses gemini-2.5-flash by default)
+**LLM Credentials:**
+- `OPENAI_API_KEY`: OpenAI API key
+- `ANTHROPIC_API_KEY`: Anthropic API key 
+- `XAI_API_KEY`: XAI API key
+- `GOOGLE_API_KEY`: Google AI API key
 
 ### API Documentation
 

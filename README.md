@@ -31,10 +31,23 @@ messages to maintain a consistency of tone and detail.
 
 - Python 3.9+
 - [uv](https://github.com/astral-sh/uv) package manager
-- API key for one of the supported LLM providers:
-  - OpenAI (GPT-4.1-mini by default)
-  - Anthropic (Claude 3.5 Haiku by default)
-  - XAI (Grok-3 by default)
+- API key for one of the supported LLM providers
+
+## Default models:
+
+Chosen to balance capability and cost for each provider. Newer, more expensive
+models tend to produce better stories, but where the cheaper model for a given
+provider is "good enough", it's preferred.
+
+Claude 3.x models don't reliably return correct JSON for structured queries, so
+use them at your own risk.
+
+- OpenAI: gpt-4.1-mini
+- Anthropic: claude-4.0-sonnet
+- XAI: grok-3-latest
+- Google: gemini-2.5-flash
+- Ollama: (no default)
+
 
 ## Documentation
 

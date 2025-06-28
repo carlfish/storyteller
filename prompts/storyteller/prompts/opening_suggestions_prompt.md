@@ -1,5 +1,9 @@
 Suggest three different opening paragraphs for a story about the provided characters. Pick an interesting location or setting, think of a situation for the characters to be in appropriate to the characters and setting, then write about them in that situation.
 
+Respond only in the defined format.
+
+No more than 200 words per paragraph.
+
 # Style Guide:
 - Write in third person
 - Prose: Evocative, descriptive
