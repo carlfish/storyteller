@@ -1,10 +1,8 @@
 from typing import List
 from .engine import Command, Chains, Response, run_chat
-from .models import Character, Scenes, Story, Chapter, Characters, Scene, Prompts
+from .models import Character, Scenes, Story, Chapter, Characters, Scene, OpeningSuggestions
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
 from langchain_core.messages.utils import count_tokens_approximately
-from abc import ABC, abstractmethod
-
 
 class CommandError(Exception):
     pass
@@ -265,3 +263,19 @@ class GenerateCharactersCommand(Command):
         await self.response.send_message(
             f"Created {len(characters)} characters:\n\n{self.prompt}"
         )
+
+class SuggestOpeningCommand(Command):
+    def __init__(self, chains: Chains, response: Response, prompt: str):
+        self.chains = chains
+        self.response = response
+        self.prompt = prompt
+
+    async def run(self, story: Story) -> None:
+        suggestions: OpeningSuggestions = await self.chains.opening_suggestions_chain.ainvoke(
+            {"characters": story.characters}
+        )
+
+        for suggestion in suggestions.suggestions:
+            await self.response.send_message(
+                f"📖 {suggestion.category}:\n\n{suggestion.opening_paragraph}"
+            )

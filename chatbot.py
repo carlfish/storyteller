@@ -12,6 +12,7 @@ from storyteller.commands import (
     CloseChapterCommand,
     ChatCommand,
     SummarizeCommand,
+    SuggestOpeningCommand,
 )
 from storyteller.common import load_file, add_standard_model_args, init_model
 import os
@@ -22,7 +23,7 @@ import argparse
 load_dotenv()
 
 DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-STORYTELLER_CLI_STORY = os.getenv("STORYTELLER_CLI_STORY", "floop")
+STORYTELLER_CLI_STORY = os.getenv("STORYTELLER_CLI_STORY", "floop-{provider}")
 HISTORY_MIN_TOKENS = int(os.getenv("HISTORY_MIN_TOKENS", "1024"))
 HISTORY_MAX_TOKENS = int(os.getenv("HISTORY_MAX_TOKENS", "4096"))
 
@@ -45,6 +46,9 @@ def init_context(prompt_dir: str):
             ),
             character_creation_prompt=load_file(
                 f"{prompt_dir}/character_create_prompt.md"
+            ),
+            opening_suggestions_prompt=load_file(
+                f"{prompt_dir}/opening_suggestions_prompt.md"
             ),
         ),
         story=Story(
@@ -81,27 +85,31 @@ def main():
     prompt_dir = os.getenv("PROMPT_DIR", "prompts/storyteller/prompts")
     story_dir = os.getenv("STORY_DIR", "prompts/storyteller/stories/genfantasy")
 
-    model = init_model(parse_args())
+    args = parse_args()
+    model = init_model(args)
 
     context = init_context(prompt_dir)
     chains = Chains(model=model, prompts=context.prompts)
     repo = FileStoryRepository(repo_dir=os.path.expanduser("~/story_repo"))
+    story_name = STORYTELLER_CLI_STORY.format(provider=args.provider)
+    response = StdoutResponse()
 
-    if not repo.story_exists(STORYTELLER_CLI_STORY):
+    if not repo.story_exists(story_name):
         init_chars = load_file(f"{story_dir}/chargen.md")
         context.story.characters = make_characters(
             chains.character_create_chain, descriptions=init_chars
         )
-        repo.save(STORYTELLER_CLI_STORY, context.story)
+        repo.save(story_name, context.story)
+
+        asyncio.run(SuggestOpeningCommand(chains, response, context.prompts.opening_suggestions_prompt).run(context.story))
 
     engine = StoryEngine(story_repository=repo)
 
-    preview_story = repo.load(STORYTELLER_CLI_STORY)
-    story_id = STORYTELLER_CLI_STORY
+    preview_story = repo.load(story_name)
+    story_id = story_name
     if len(preview_story.current_messages) > 0:
         print(f"Last message:\n\n{preview_story.current_messages[-1].content}\n\n")
 
-    response = StdoutResponse()
 
     print("Chatbot initialized. Type 'quit' to exit.")
     print("You can start chatting now!")

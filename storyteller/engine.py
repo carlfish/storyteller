@@ -9,7 +9,7 @@ from langchain_core.prompts import (
 from langchain_core.messages.utils import merge_message_runs
 from langchain_core.messages.ai import AIMessageChunk, add_ai_message_chunks
 
-from .models import Story, Scenes, Chapter, Characters, Prompts
+from .models import Story, Scenes, Chapter, Characters, Prompts, OpeningSuggestions
 
 from pydantic import BaseModel
 from typing import List, Sequence, TypeVar
@@ -83,6 +83,9 @@ class Chains:
         )
         self.character_create_chain = make_structured_chain(
             model, prompts.character_creation_prompt, Characters
+        )
+        self.opening_suggestions_chain = make_structured_chain(
+            model, prompts.opening_suggestions_prompt, OpeningSuggestions
         )
 
 

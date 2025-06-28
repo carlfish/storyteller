@@ -18,6 +18,10 @@ class Scene(BaseModel):
     time_and_location: str
     events: str
 
+class OpeningSuggestion(BaseModel):
+    category: str
+    opening_paragraph: str
+
 
 class Story(BaseModel):
     @classmethod
@@ -72,6 +76,7 @@ class Prompts(BaseModel):
     - chapter_summary_prompt: compress scenes into a chapter summary
     - character_summary_prompt: update character bios based on the chat history
     - fix_prompt: allow the user to request specific changes to the story
+    - opening_suggestions_prompt: suggest three different opening paragraphs for a story involving the characters
     """
 
     base_prompt: str
@@ -80,6 +85,7 @@ class Prompts(BaseModel):
     chapter_summary_prompt: str
     character_summary_prompt: str
     fix_prompt: str
+    opening_suggestions_prompt: str
 
 
 class Context(BaseModel):
@@ -105,3 +111,10 @@ class Scenes(BaseModel):
     """
 
     scenes: List[Scene]
+
+class OpeningSuggestions(BaseModel):
+    """Wrapper for a list of opening suggestions, used as
+    structured output for the opening suggestions prompt.
+    """
+
+    suggestions: List[OpeningSuggestion]
