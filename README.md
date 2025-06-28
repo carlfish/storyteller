@@ -39,8 +39,8 @@ Chosen to balance capability and cost for each provider. Newer, more expensive
 models tend to produce better stories, but where the cheaper model for a given
 provider is "good enough", it's preferred.
 
-Claude 3.x models don't reliably return correct JSON for structured queries, so
-use them at your own risk.
+Claude 3.5-haiku doesn't reliably return correct JSON for structured queries, so
+use it at your own risk.
 
 - OpenAI: gpt-4.1-mini
 - Anthropic: claude-4.0-sonnet
