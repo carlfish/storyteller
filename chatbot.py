@@ -1,8 +1,8 @@
 import re
 from typing import List
 from dotenv import load_dotenv
-from storyteller.models import Context, Prompts, Story, Character
-from storyteller.engine import FileStoryRepository, StoryEngine, Chains
+from storyteller.models import Context, Story, Character
+from storyteller.engine import FileStoryRepository, StoryEngine, Chains, create_prompts
 from storyteller.commands import (
     Response,
     RetryCommand,
@@ -36,21 +36,7 @@ else:
 
 def init_context(prompt_dir: str):
     return Context(
-        prompts=Prompts(
-            base_prompt=load_file(f"{prompt_dir}/base_prompt.md"),
-            fix_prompt=load_file(f"{prompt_dir}/fix_prompt.md"),
-            scene_summary_prompt=load_file(f"{prompt_dir}/summary_prompt.md"),
-            chapter_summary_prompt=load_file(f"{prompt_dir}/chapter_summary_prompt.md"),
-            character_summary_prompt=load_file(
-                f"{prompt_dir}/character_summary_prompt.md"
-            ),
-            character_creation_prompt=load_file(
-                f"{prompt_dir}/character_create_prompt.md"
-            ),
-            opening_suggestions_prompt=load_file(
-                f"{prompt_dir}/opening_suggestions_prompt.md"
-            ),
-        ),
+        prompts=create_prompts(prompt_dir),
         story=Story(
             characters=[], chapters=[], scenes=[], current_messages=[], old_messages=[]
         ),
@@ -95,13 +81,17 @@ def main():
     response = StdoutResponse()
 
     if not repo.story_exists(story_name):
-        init_chars = load_file(f"{story_dir}/chargen.md")
+        init_chars = load_file(story_dir, story_dir, "chargen.md")
         context.story.characters = make_characters(
             chains.character_create_chain, descriptions=init_chars
         )
         repo.save(story_name, context.story)
 
-        asyncio.run(SuggestOpeningCommand(chains, response, context.prompts.opening_suggestions_prompt).run(context.story))
+        asyncio.run(
+            SuggestOpeningCommand(
+                chains, response, context.prompts.opening_suggestions_prompt
+            ).run(context.story)
+        )
 
     engine = StoryEngine(story_repository=repo)
 
@@ -109,7 +99,6 @@ def main():
     story_id = story_name
     if len(preview_story.current_messages) > 0:
         print(f"Last message:\n\n{preview_story.current_messages[-1].content}\n\n")
-
 
     print("Chatbot initialized. Type 'quit' to exit.")
     print("You can start chatting now!")

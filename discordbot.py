@@ -1,11 +1,10 @@
 import discord
-from storyteller.engine import FileStoryRepository, StoryEngine, Chains
+from storyteller.engine import FileStoryRepository, StoryEngine, Chains, create_prompts
 from storyteller.common import load_file, add_standard_model_args, init_model
 import storyteller.commands
 import re
 import os
 import json
-from storyteller.models import Prompts
 from pydantic import BaseModel
 from threading import Lock
 from dotenv import load_dotenv
@@ -72,14 +71,7 @@ class ChannelConfigRegistry:
             self._save(channels)
 
 
-prompts = Prompts(
-    base_prompt=load_file(f"{PROMPT_DIR}/base_prompt.md"),
-    fix_prompt=load_file(f"{PROMPT_DIR}/fix_prompt.md"),
-    scene_summary_prompt=load_file(f"{PROMPT_DIR}/summary_prompt.md"),
-    chapter_summary_prompt=load_file(f"{PROMPT_DIR}/chapter_summary_prompt.md"),
-    character_summary_prompt=load_file(f"{PROMPT_DIR}/character_summary_prompt.md"),
-    character_creation_prompt=load_file(f"{PROMPT_DIR}/character_create_prompt.md"),
-)
+prompts = create_prompts(PROMPT_DIR)
 
 
 @client.event
@@ -123,7 +115,7 @@ def get_channel_yolo(channel_id: str) -> bool:
     return cfg.yolo_mode
 
 
-chargen_prompt = load_file(f"{STORY_DIR}/chargen.md")
+chargen_prompt = load_file(STORY_DIR, STORY_DIR, "chargen.md")
 
 story_commands: dict[str, bot_commands.BotCommand] = {
     "newstory": bot_commands.NewStoryCommand(

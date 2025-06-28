@@ -10,6 +10,7 @@ from langchain_core.messages.utils import merge_message_runs
 from langchain_core.messages.ai import AIMessageChunk, add_ai_message_chunks
 
 from .models import Story, Scenes, Chapter, Characters, Prompts, OpeningSuggestions
+from .common import load_file
 
 from pydantic import BaseModel
 from typing import List, Sequence, TypeVar
@@ -18,6 +19,8 @@ from threading import Lock
 import os
 
 _BM = TypeVar("_BM", bound=BaseModel)
+
+DEFAULT_PROMPT_DIR = "prompts/storyteller/prompts"
 
 
 class StoryBackedMessageHistory(BaseChatMessageHistory):
@@ -65,6 +68,29 @@ def make_structured_chain(
 ):
     return PromptTemplate.from_template(prompt) | model.with_structured_output(
         output_format, method="json_schema"
+    )
+
+
+def create_prompts(prompt_dir: str) -> Prompts:
+    """Create a Prompts object by loading all prompt files from the given directory."""
+    return Prompts(
+        base_prompt=load_file(prompt_dir, DEFAULT_PROMPT_DIR, "base_prompt.md"),
+        fix_prompt=load_file(prompt_dir, DEFAULT_PROMPT_DIR, "fix_prompt.md"),
+        scene_summary_prompt=load_file(
+            prompt_dir, DEFAULT_PROMPT_DIR, "summary_prompt.md"
+        ),
+        chapter_summary_prompt=load_file(
+            prompt_dir, DEFAULT_PROMPT_DIR, "chapter_summary_prompt.md"
+        ),
+        character_summary_prompt=load_file(
+            prompt_dir, DEFAULT_PROMPT_DIR, "character_summary_prompt.md"
+        ),
+        character_creation_prompt=load_file(
+            prompt_dir, DEFAULT_PROMPT_DIR, "character_create_prompt.md"
+        ),
+        opening_suggestions_prompt=load_file(
+            prompt_dir, DEFAULT_PROMPT_DIR, "opening_suggestions_prompt.md"
+        ),
     )
 
 
@@ -153,6 +179,7 @@ class Command(ABC):
     async def run(self, story: Story) -> None:
         pass
 
+
 class StoryEngine:
     def __init__(self, story_repository: StoryRepository):
         self.story_repository = story_repository
@@ -165,6 +192,7 @@ class StoryEngine:
             self.story_repository.save(story_id, story)
         finally:
             self.story_repository.unlock(story_id)
+
 
 class Response(ABC):
     @abstractmethod
@@ -183,7 +211,9 @@ class Response(ABC):
     async def append(self, msg: str):
         pass
 
+
 # Helper functions
+
 
 async def run_chat(
     chat_chain: Runnable,

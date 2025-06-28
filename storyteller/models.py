@@ -18,6 +18,7 @@ class Scene(BaseModel):
     time_and_location: str
     events: str
 
+
 class OpeningSuggestion(BaseModel):
     category: str
     opening_paragraph: str
@@ -111,6 +112,7 @@ class Scenes(BaseModel):
     """
 
     scenes: List[Scene]
+
 
 class OpeningSuggestions(BaseModel):
     """Wrapper for a list of opening suggestions, used as

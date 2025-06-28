@@ -1,4 +1,5 @@
 import argparse
+import os
 from langchain.chat_models import init_chat_model
 
 default_models = {
@@ -8,9 +9,17 @@ default_models = {
 }
 
 
-def load_file(filename: str) -> str:
-    with open(filename, "r") as f:
-        return f.read().strip()
+def load_file(directory: str, fallback_directory: str, filename: str) -> str:
+    """Load a file from directory, falling back to fallback_directory if not found."""
+    primary_path = os.path.join(directory, filename)
+    fallback_path = os.path.join(fallback_directory, filename)
+
+    try:
+        with open(primary_path, "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        with open(fallback_path, "r") as f:
+            return f.read().strip()
 
 
 def add_standard_model_args(parser: argparse.ArgumentParser) -> None:

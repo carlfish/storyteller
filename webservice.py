@@ -6,11 +6,11 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from storyteller.models import Story
-from storyteller.engine import FileStoryRepository, StoryEngine, Chains
+from storyteller.engine import FileStoryRepository, StoryEngine, Chains, create_prompts
 from storyteller import (
     commands as c,
 )  # Aliased to avoid clash with Response from fastapi
-from storyteller.common import load_file, add_standard_model_args, init_model
+from storyteller.common import add_standard_model_args, init_model
 import argparse
 
 load_dotenv()
@@ -28,14 +28,7 @@ parser = argparse.ArgumentParser(description="Tell a story")
 add_standard_model_args(parser)
 model = init_model(parser.parse_args())
 
-prompts = c.Prompts(
-    base_prompt=load_file(f"{PROMPT_DIR}/base_prompt.md"),
-    fix_prompt=load_file(f"{PROMPT_DIR}/fix_prompt.md"),
-    scene_summary_prompt=load_file(f"{PROMPT_DIR}/summary_prompt.md"),
-    chapter_summary_prompt=load_file(f"{PROMPT_DIR}/chapter_summary_prompt.md"),
-    character_summary_prompt=load_file(f"{PROMPT_DIR}/character_summary_prompt.md"),
-    character_creation_prompt=load_file(f"{PROMPT_DIR}/character_create_prompt.md"),
-)
+prompts = create_prompts(PROMPT_DIR)
 
 chains = Chains(model=model, prompts=prompts)
 repo = FileStoryRepository(repo_dir=os.path.expanduser("~/story_repo"))
@@ -140,7 +133,9 @@ def parse_command(
     elif cmd_name == "rewind":
         return c.RewindCommand(chains, response=response)
     elif cmd_name == "fix":
-        return c.FixCommand(chains, fix_prompt=prompts.fix_prompt, response=response, instruction=body)
+        return c.FixCommand(
+            chains, fix_prompt=prompts.fix_prompt, response=response, instruction=body
+        )
     elif cmd_name == "replace":
         return c.ReplaceCommand(response=response, text=body)
     elif cmd_name == "chapter":
