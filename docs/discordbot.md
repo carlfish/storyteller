@@ -46,13 +46,16 @@ uv run python discordbot.py -p anthropic -m claude-3-5-sonnet-latest
 # Use XAI Grok
 uv run python discordbot.py -p xai -m grok-3-latest
 
+# Use Google Gemini
+uv run python discordbot.py -p google -m gemini-2.5-flash
+
 # Use Ollama with a local model
 uv run python discordbot.py -p ollama -m llama2
 ```
 
 ### Available Options
 
-- `-p, --provider PROVIDER` - AI provider to use (openai, anthropic, xai, ollama) **[Required]**
+- `-p, --provider PROVIDER` - AI provider to use (openai, anthropic, xai, google, ollama) **[Required]**
 - `-m, --model MODEL_NAME` - Specify the model name to use (optional, uses provider default)
 
 ## Environment Variables
@@ -63,11 +66,13 @@ uv run python discordbot.py -p ollama -m llama2
     - `OPENAI_API_KEY`: OpenAI API key
     - `ANTHROPIC_API_KEY`: Anthropic API key 
     - `XAI_API_KEY`: XAI API key
+    - `GOOGLE_API_KEY`: Google AI API key
 
 - Optional model configuration:
   - `OPENAPI_MODEL`: OpenAI model name (default: "gpt-4.1-mini")
   - `ANTHROPIC_MODEL`: Anthropic model name (default: "claude-3-5-haiku-latest")
   - `XAI_MODEL`: XAI model name (default: "grok-3-latest")
+  - `GOOGLE_MODEL`: Google model name (default: "gemini-2.5-flash")
 
 - Other settings:
   - `DEBUG`: Set to "true" for detailed logging

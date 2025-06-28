@@ -27,13 +27,16 @@ python webservice.py -p anthropic -m claude-3-5-sonnet-latest
 # Start with XAI Grok
 python webservice.py -p xai -m grok-3-latest
 
+# Start with Google Gemini
+python webservice.py -p google -m gemini-2.5-flash
+
 # Start with Ollama
 python webservice.py -p ollama -m llama2
 ```
 
 ### Available Options
 
-- `-p, --provider PROVIDER` - AI provider to use (openai, anthropic, xai, ollama) **[Required]**
+- `-p, --provider PROVIDER` - AI provider to use (openai, anthropic, xai, google, ollama) **[Required]**
 - `-m, --model MODEL_NAME` - Specify the model name to use (optional, uses provider default)
 
 ## Configuration
@@ -54,6 +57,7 @@ python webservice.py -p ollama -m llama2
 - `OPENAI_API_KEY`: OpenAI API key (uses gpt-4.1-mini by default)
 - `ANTHROPIC_API_KEY`: Anthropic API key (uses claude-3-5-haiku-latest by default)
 - `XAI_API_KEY`: XAI API key (uses grok-3-latest by default)
+- `GOOGLE_API_KEY`: Google AI API key (uses gemini-2.5-flash by default)
 
 ### API Documentation
 
@@ -72,5 +76,5 @@ HTTP_PORT=3000 python webservice.py -p openai
 
 Run with specific story configuration:
 ```bash
-STORY_DIR=/path/to/stories PROMPT_DIR=/path/to/prompts python webservice.py -p anthropic
+STORY_DIR=/path/to/stories PROMPT_DIR=/path/to/prompts python webservice.py -p google
 ```

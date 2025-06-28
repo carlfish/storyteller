@@ -6,6 +6,7 @@ default_models = {
     "openai": "gpt-4.1-mini",
     "anthropic": "claude-3-5-haiku-latest",
     "xai": "grok-3-latest",
+    "google": "gemini-2.5-flash",
 }
 
 
@@ -31,7 +32,7 @@ def add_standard_model_args(parser: argparse.ArgumentParser) -> None:
         "--provider",
         type=str,
         required=True,
-        choices=["openai", "anthropic", "xai", "ollama"],
+        choices=["openai", "anthropic", "xai", "google", "ollama"],
         default="openai",
         help="AI Provider to use",
     )
@@ -47,6 +48,9 @@ def add_standard_model_args(parser: argparse.ArgumentParser) -> None:
 def init_model(args: argparse.Namespace):
     if not args.model and args.provider in default_models:
         args.model = default_models[args.provider]
+
+    if args.provider == "google":
+        args.provider = "google_genai"
 
     model = init_chat_model(
         model=args.model, model_provider=args.provider, temperature=args.temperature

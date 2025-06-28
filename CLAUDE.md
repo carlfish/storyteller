@@ -20,6 +20,7 @@ Required API keys (chatbot uses first available):
 - `OPENAI_API_KEY` (uses gpt-4.1-mini by default)
 - `ANTHROPIC_API_KEY` (uses claude-3-5-haiku-latest by default)  
 - `XAI_API_KEY` (uses grok-3-latest by default)
+- `GOOGLE_API_KEY` (uses gemini-2.5-flash by default)
 
 Configuration:
 - `STORYTELLER_CLI_STORY`: Story name for CLI (default: "floop")

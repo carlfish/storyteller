@@ -19,13 +19,16 @@ python webservice.py -p anthropic -m claude-3-5-sonnet-latest
 # Start with XAI Grok
 python webservice.py -p xai -m grok-3-latest
 
+# Start with Google Gemini
+python webservice.py -p google -m gemini-2.5-flash
+
 # Start with Ollama
 python webservice.py -p ollama -m llama2
 ```
 
 ### Available Options
 
-- `-p, --provider PROVIDER` - AI provider to use (openai, anthropic, xai, ollama) **[Required]**
+- `-p, --provider PROVIDER` - AI provider to use (openai, anthropic, xai, google, ollama) **[Required]**
 - `-m, --model MODEL_NAME` - Specify the model name to use (optional, uses provider default)
 
 ## Base URL
