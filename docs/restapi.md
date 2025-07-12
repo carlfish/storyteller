@@ -1,6 +1,19 @@
 # REST API
 
-The storyteller web service provides a REST API for creating and managing interactive stories.
+The storyteller web service provides a REST API for creating and managing interactive stories with JWT authentication.
+
+## Authentication
+
+All API endpoints require authentication using Auth0 JWT Bearer tokens with the `storyteller:use` scope.
+
+### Authorization Header
+Include the JWT token in the Authorization header:
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+### Getting a Token
+Obtain a JWT token from your Auth0 application configured for the Storyteller API audience.
 
 ## Command-Line Model Selection
 
@@ -29,25 +42,73 @@ By default, the API is available at `http://localhost:8000` (configurable via `H
 
 **POST** `/stories`
 
-Creates a new story with the provided character descriptions.
+Creates a new empty story and returns the complete story object with UUID.
 
-**Request Body:**
-```json
-{
-  "characters": "Character descriptions here"
-}
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
 ```
 
 **Response:**
 - Status: 201 Created
 - Headers: `Location: /stories/{story_uuid}`
-- Body: Empty
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "characters": [],
+  "chapters": [],
+  "scenes": [],
+  "old_messages": [],
+  "current_messages": []
+}
+```
+
+### Generate Characters
+
+**POST** `/characters/generate`
+
+Generates characters based on a text prompt using AI.
+
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "prompt": "A brave knight named Sir Galahad who seeks the Holy Grail. A wise wizard named Merlin who guides heroes on their quests."
+}
+```
+
+**Response:**
+```json
+{
+  "characters": [
+    {
+      "name": "Sir Galahad",
+      "description": "A brave knight who seeks the Holy Grail"
+    },
+    {
+      "name": "Merlin",
+      "description": "A wise wizard who guides heroes on their quests"
+    }
+  ]
+}
+```
 
 ### Get Story
 
 **GET** `/stories/{story_uuid}`
 
 Retrieves the complete story state including characters, chapters, scenes, and message history.
+
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+```
 
 **Response:**
 ```json
@@ -56,9 +117,8 @@ Retrieves the complete story state including characters, chapters, scenes, and m
   "characters": [...],
   "chapters": [...],
   "scenes": [...],
-  "messages": [...],
-  "created_at": "timestamp",
-  "updated_at": "timestamp"
+  "old_messages": [...],
+  "current_messages": [...]
 }
 ```
 
@@ -67,6 +127,12 @@ Retrieves the complete story state including characters, chapters, scenes, and m
 **POST** `/stories/{story_uuid}`
 
 Executes a command on the specified story.
+
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+```
 
 **Request Body:**
 ```json
@@ -120,7 +186,24 @@ Close the current chapter and start a new one.
 
 ## Error Responses
 
+### 401 Unauthorized
+Missing or invalid JWT token:
+```json
+{
+  "detail": "Unauthorized"
+}
+```
+
+### 403 Forbidden
+Valid token but insufficient scope:
+```json
+{
+  "detail": "Insufficient scope"
+}
+```
+
 ### 404 Not Found
+Story not found:
 ```json
 {
   "detail": "Story not found"
@@ -128,15 +211,23 @@ Close the current chapter and start a new one.
 ```
 
 ### 500 Internal Server Error
+Server error:
 ```json
 {
   "detail": "Error message describing what went wrong"
 }
 ```
 
+## Environment Variables
+
+Required for Auth0 integration:
+- `AUTH0_DOMAIN` - Your Auth0 domain
+- `AUTH0_API_AUDIENCE` - API audience identifier
+
 ## Notes
 
 - All commands automatically trigger story summarization to manage context window size
 - Stories are persisted to the file system and survive service restarts
 - The API uses UUID identifiers for stories to ensure uniqueness
-- Character creation is handled automatically when creating a new story using the provided descriptions
+- JWT tokens must include the `storyteller:use` scope to access any endpoint
+- Character generation is now a separate endpoint that can be called independently

@@ -16,6 +16,7 @@ dependencies = [
     "discord-py>=2.5.2",
     "fastapi>=0.104.0",
     "uvicorn>=0.24.0",
+    "auth0-fastapi-api>=1.0.0b3",
 ]
 
 [project.optional-dependencies]
@@ -27,3 +28,8 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build" 
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.1",
+]

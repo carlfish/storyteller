@@ -1,12 +1,22 @@
+import hashlib
+import json
 import os
 import uuid
-from typing import Optional
-from fastapi import FastAPI, HTTPException, Response
+from typing import Any, Optional
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from fastapi_plugin import Auth0FastAPI
 
-from storyteller.models import Story
-from storyteller.engine import FileStoryRepository, StoryEngine, Chains, create_prompts
+from storyteller.models import Story, Characters
+from storyteller.engine import (
+    FileStoryRepository,
+    StoryEngine,
+    Chains,
+    StoryRepository,
+    create_prompts,
+)
 from storyteller import (
     commands as c,
 )  # Aliased to avoid clash with Response from fastapi
@@ -24,6 +34,9 @@ STORY_DIR = os.getenv("STORY_DIR", "prompts/storyteller/stories/genfantasy")
 HISTORY_MIN_TOKENS = int(os.getenv("HISTORY_MIN_TOKENS", "1024"))
 HISTORY_MAX_TOKENS = int(os.getenv("HISTORY_MAX_TOKENS", "4096"))
 
+AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
+AUTH0_API_AUDIENCE = os.getenv("AUTH0_API_AUDIENCE")
+
 parser = argparse.ArgumentParser(description="Tell a story")
 add_standard_model_args(parser)
 model = init_model(parser.parse_args())
@@ -31,8 +44,21 @@ model = init_model(parser.parse_args())
 prompts = create_prompts(PROMPT_DIR)
 
 chains = Chains(model=model, prompts=prompts)
-repo = FileStoryRepository(repo_dir=os.path.expanduser("~/story_repo"))
-engine = StoryEngine(story_repository=repo)
+
+auth = Auth0FastAPI(domain=AUTH0_DOMAIN, audience=AUTH0_API_AUDIENCE)
+
+use_scope = ["storyteller:use"]
+
+
+def get_story_repository(user_id: str) -> StoryRepository:
+    hashed_id = hashlib.sha256(user_id.encode()).hexdigest()
+    repo_dir = os.path.expanduser(f"~/story_repo/{hashed_id}")
+    os.makedirs(repo_dir, exist_ok=True)
+    userinfo_path = os.path.join(repo_dir, "userinfo.json")
+    if not os.path.exists(userinfo_path):
+        with open(userinfo_path, "w") as f:
+            json.dump({"userid": user_id}, f)
+    return FileStoryRepository(repo_dir=repo_dir)
 
 
 class CommandRequest(BaseModel):
@@ -40,8 +66,8 @@ class CommandRequest(BaseModel):
     body: Optional[str] = None
 
 
-class CreateStoryRequest(BaseModel):
-    characters: str
+class GenerateCharactersRequest(BaseModel):
+    prompt: str
 
 
 class APIResponse(c.Response):
@@ -65,38 +91,76 @@ class APIResponse(c.Response):
             self.messages.append(msg)
 
 
-def make_characters(descriptions: str):
-    return chains.character_create_chain.invoke({"characters": descriptions}).characters
+def make_characters(descriptions: str) -> Characters:
+    return chains.character_create_chain.invoke({"characters": descriptions})
+
+
+def decorate_story(story_id: str, story: Story) -> dict[str, Any]:
+    story_dict = story.model_dump()
+    story_dict["id"] = story_id
+    return story_dict
 
 
 @app.post("/stories")
-async def create_story(request: CreateStoryRequest):
+async def create_story(
+    claims: dict = Depends(auth.require_auth(scopes=use_scope)),
+):
     """Create a new story and return redirect to its UUID endpoint"""
+    user_id = claims["sub"]
+
     story_uuid = str(uuid.uuid4())
 
     story = Story.new()
-    story.characters = make_characters(descriptions=request.characters)
 
+    repo = get_story_repository(user_id)
     repo.save(story_uuid, story)
 
-    return Response(
-        content="", status_code=201, headers={"Location": f"/stories/{story_uuid}"}
+    return JSONResponse(
+        content=decorate_story(story_uuid, story),
+        status_code=201,
+        headers={"Location": f"/stories/{story_uuid}"},
     )
 
 
+@app.post("/characters/generate")
+async def generate_characters(
+    request: GenerateCharactersRequest,
+    claims: dict = Depends(auth.require_auth(scopes=use_scope)),
+):
+    """Generate characters for a story"""
+
+    print(claims)
+
+    characters = make_characters(request.prompt)
+
+    return characters.model_dump()
+
+
 @app.get("/stories/{story_uuid}")
-async def get_story(story_uuid: str):
+async def get_story(
+    story_uuid: str, claims: dict = Depends(auth.require_auth(scopes=use_scope))
+):
     """Get the full story state"""
+
+    repo = get_story_repository(claims["sub"])
+
     if not repo.story_exists(story_uuid):
         raise HTTPException(status_code=404, detail="Story not found")
 
     story = repo.load(story_uuid)
-    return story.model_dump()
+    return decorate_story(story_uuid, story)
 
 
 @app.post("/stories/{story_uuid}")
-async def execute_command(story_uuid: str, command_request: CommandRequest):
+async def execute_command(
+    story_uuid: str,
+    command_request: CommandRequest,
+    claims: dict = Depends(auth.require_auth(scopes=use_scope)),
+):
     """Execute a command on the story"""
+
+    repo = get_story_repository(claims["sub"])
+
     if not repo.story_exists(story_uuid):
         raise HTTPException(status_code=404, detail="Story not found")
 
@@ -104,6 +168,7 @@ async def execute_command(story_uuid: str, command_request: CommandRequest):
 
     try:
         cmd = parse_command(command_request, chains, response)
+        engine = StoryEngine(story_repository=repo)
         await engine.run_command(story_uuid, cmd)
         summarize_cmd = c.SummarizeCommand(
             chains,

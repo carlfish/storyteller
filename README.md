@@ -31,8 +31,9 @@ messages to maintain a consistency of tone and detail.
 
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) package manager
-- [just](https://github.com/casey/just) (optional) for cli shortcuts
 - API key for one of the supported LLM providers
+- [just](https://github.com/casey/just) (optional) for cli shortcuts
+- [auth0 CLI](https://github.com/auth0/auth0-cli) (optional) for testing webapp auth
 
 ## Default models:
 

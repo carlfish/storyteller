@@ -1,3 +1,5 @@
+set dotenv-load := true
+
 # Common development tasks
 
 # Update dependencies including dev dependencies
@@ -5,24 +7,32 @@ update:
     uv sync --extra dev
 
 # Run the main CLI chatbot
-chatbot:
-    uv run python chatbot.py
+chatbot provider='openai': 
+    uv run python chatbot.py -p {{provider}}
 
 # Run Discord bot
-discord:
-    uv run python discordbot.py
+discord provider='openai': 
+    uv run python discordbot.py -p {{provider}}
+
+# Run the web service
+webservice provider='openai':
+    uv run python webservice.py -p {{provider}}
+
+# Generate a test bearer token for the web service
+generate-token:
+    auth0 test token $AUTH0_TEST_CLIENT_ID --audience $AUTH0_API_AUDIENCE --scopes storyteller:use
 
 # Run linting
 lint:
-    ruff check --fix
+    uv run ruff check --fix
 
 # Run formatting
 format:
-    ruff format
+    uv run ruff format
 
 # Run mypy
 typecheck:
-    mypy .
+   uv run mypy .
 
 lint-all: lint format typecheck
 

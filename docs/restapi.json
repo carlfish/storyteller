@@ -11,6 +11,11 @@
       "description": "Development server"
     }
   ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
   "paths": {
     "/stories": {
       "post": {
@@ -152,6 +157,14 @@
     }
   },
   "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Auth0 JWT Bearer token with 'storyteller:use' scope required for all endpoints"
+      }
+    },
     "schemas": {
       "CreateStoryRequest": {
         "type": "object",
@@ -210,38 +223,35 @@
             "items": {
               "type": "object"
             },
-            "description": "List of characters in the story"
+            "description": "Character summaries"
           },
           "chapters": {
             "type": "array",
             "items": {
               "type": "object"
             },
-            "description": "List of chapters in the story"
+            "description": "Chapter summaries"
           },
           "scenes": {
             "type": "array",
             "items": {
               "type": "object"
             },
-            "description": "List of scenes in the story"
+            "description": "List of scenes in the current chapter"
           },
-          "messages": {
+          "old_messages": {
             "type": "array",
             "items": {
               "type": "object"
             },
-            "description": "Message history for the story"
+            "description": "Archived message history"
           },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp when the story was created"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp when the story was last updated"
+          "current_messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Active message history"
           }
         }
       },
