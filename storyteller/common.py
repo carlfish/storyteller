@@ -51,12 +51,15 @@ def init_model(args: argparse.Namespace):
 
     if args.provider == "google":
         args.provider = "google_genai"
-        
+
     # Anthropic defaults to 1024 max response tokens, which is only about 800 words so you can hit
     # token limits pretty easily.
     if args.provider == "anthropic":
         return init_chat_model(
-            model=args.model, model_provider=args.provider, temperature=args.temperature, max_tokens=4000
+            model=args.model,
+            model_provider=args.provider,
+            temperature=args.temperature,
+            max_tokens=4000,
         )
     else:
         return init_chat_model(

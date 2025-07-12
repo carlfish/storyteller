@@ -12,9 +12,9 @@ No more than 200 words per paragraph.
 
 The suggestions should be one each of the following categories:
 
-1. Hiatus. Nothing is happening.
+1. Fun. The characters are enjoying themselves.
 2. Anticipation. Something is about to happen.
-3. Action. Something is happening!
+3. Action. Something exciting is happening!
 
 # Characters
 

@@ -67,7 +67,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main():
+async def main():
     prompt_dir = os.getenv("PROMPT_DIR", "prompts/storyteller/prompts")
     story_dir = os.getenv("STORY_DIR", "prompts/storyteller/stories/genfantasy")
 
@@ -87,11 +87,9 @@ def main():
         )
         repo.save(story_name, context.story)
 
-        asyncio.run(
-            SuggestOpeningCommand(
-                chains, response, context.prompts.opening_suggestions_prompt
-            ).run(context.story)
-        )
+        await SuggestOpeningCommand(
+            chains, response, context.prompts.opening_suggestions_prompt
+        ).run(context.story)
 
     engine = StoryEngine(story_repository=repo)
 
@@ -139,24 +137,24 @@ def main():
             # summarize after running command so that we don't accidentally summarize something that
             # needs replaying/rewriting.
             try:
-                asyncio.run(engine.run_command(story_id, cmd))
-                asyncio.run(
-                    engine.run_command(
-                        story_id,
-                        SummarizeCommand(
-                            chains,
-                            response=response,
-                            min_tokens=HISTORY_MIN_TOKENS,
-                            max_tokens=HISTORY_MAX_TOKENS,
-                        ),
-                    )
+                await engine.run_command(story_id, cmd)
+                await engine.run_command(
+                    story_id,
+                    SummarizeCommand(
+                        chains,
+                        response=response,
+                        min_tokens=HISTORY_MIN_TOKENS,
+                        max_tokens=HISTORY_MAX_TOKENS,
+                    ),
                 )
+
             except Exception as e:
                 print(f"Something went wrong: {e}")
+                raise e
         except KeyboardInterrupt:
             print("\nGoodbye!")
             break
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -1,4 +1,4 @@
-Create a scene by scene summary of the story so far, by combining the existing scene summaries with the new story. DO NOT remove any existing scenes. 
+Create a scene by scene summary of the story so far, by combining the existing scene summaries with the new story. Merge scenes that are just continuations of previous scenes. DO NOT remove scenes entirely.
 
 Use the following format
 
