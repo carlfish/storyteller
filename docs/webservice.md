@@ -47,6 +47,11 @@ python webservice.py -p openai -m gpt-4
 - `XAI_API_KEY`: XAI API key
 - `GOOGLE_API_KEY`: Google AI API key
 
+**Security & CORS:**
+- `AUTH0_DOMAIN`: Auth0 domain for authentication
+- `AUTH0_API_AUDIENCE`: Auth0 API audience identifier
+- `CORS_ORIGINS`: Comma-separated list of allowed CORS origins (default: "*" for all origins)
+
 ### API Documentation
 
 See: [restapi.md]

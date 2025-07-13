@@ -5,6 +5,7 @@ import uuid
 from typing import Any, Optional
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from fastapi_plugin import Auth0FastAPI
@@ -25,8 +26,6 @@ import argparse
 
 load_dotenv()
 
-app = FastAPI(title="Storyteller API", version="0.1.0")
-
 HTTP_HOST = os.getenv("HTTP_HOST", "0.0.0.0")
 HTTP_PORT = int(os.getenv("HTTP_PORT", "8000"))
 PROMPT_DIR = os.getenv("PROMPT_DIR", "prompts/storyteller/prompts")
@@ -36,6 +35,17 @@ HISTORY_MAX_TOKENS = int(os.getenv("HISTORY_MAX_TOKENS", "4096"))
 
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
 AUTH0_API_AUDIENCE = os.getenv("AUTH0_API_AUDIENCE")
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*").split(",")
+
+app = FastAPI(title="Storyteller API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 parser = argparse.ArgumentParser(description="Tell a story")
 add_standard_model_args(parser)
@@ -99,6 +109,14 @@ def decorate_story(story_id: str, story: Story) -> dict[str, Any]:
     story_dict = story.model_dump()
     story_dict["id"] = story_id
     return story_dict
+
+
+@app.get("/stories")
+async def list_stories(
+    claims: dict = Depends(auth.require_auth(scopes=use_scope)),
+):
+    """List all stories"""
+    return []
 
 
 @app.post("/stories")
