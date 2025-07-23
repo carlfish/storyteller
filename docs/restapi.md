@@ -38,6 +38,39 @@ By default, the API is available at `http://localhost:8000` (configurable via `H
 
 ## Endpoints
 
+### List Stories
+
+**GET** `/stories`
+
+Retrieves a list of all stories for the authenticated user with basic metadata.
+
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "some uuid",
+    "title": "The Quest for the Holy Grail",
+    "chapters": 3,
+    "characters": 4,
+    "created": "2024-01-15T10:30:00Z",
+    "last_modified": "2024-01-16T14:45:00Z"
+  },
+  {
+    "id": "another uuid",
+    "title": "Space Adventure",
+    "chapters": 1,
+    "characters": 2,
+    "created": "2024-01-16T09:15:00Z",
+    "last_modified": "2024-01-16T12:20:00Z"
+  }
+]
+```
+
 ### Create Story
 
 **POST** `/stories`
@@ -114,6 +147,7 @@ Authorization: Bearer <jwt-token>
 ```json
 {
   "id": "story_uuid",
+  "title": "Story Title",
   "characters": [...],
   "chapters": [...],
   "scenes": [...],

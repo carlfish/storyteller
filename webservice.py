@@ -115,8 +115,10 @@ def decorate_story(story_id: str, story: Story) -> dict[str, Any]:
 async def list_stories(
     claims: dict = Depends(auth.require_auth(scopes=use_scope)),
 ):
-    """List all stories"""
-    return []
+    """List all stories for the current user"""
+    user_id = claims["sub"]
+    repo = get_story_repository(user_id)
+    return repo.list()
 
 
 @app.post("/stories")

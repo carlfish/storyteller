@@ -9,12 +9,22 @@ from langchain_core.prompts import (
 from langchain_core.messages.utils import merge_message_runs
 from langchain_core.messages.ai import AIMessageChunk, add_ai_message_chunks
 
-from .models import Story, Scenes, Chapter, Characters, Prompts, OpeningSuggestions
+from .models import (
+    Story,
+    StoryIndex,
+    Scenes,
+    Chapter,
+    Characters,
+    Prompts,
+    OpeningSuggestions,
+)
 from .common import load_file
 
-from pydantic import BaseModel
-from typing import List, Sequence, TypeVar
+from pydantic import BaseModel, TypeAdapter
+from typing import List, Sequence, TypeVar, Dict
 from threading import Lock
+from pathlib import Path
+from datetime import datetime
 
 import os
 
@@ -117,6 +127,10 @@ class Chains:
 
 class StoryRepository(ABC):
     @abstractmethod
+    def list(self) -> list[StoryIndex]:
+        pass
+
+    @abstractmethod
     def lock(self, story_id: str) -> None:
         pass
 
@@ -141,6 +155,10 @@ class StoryLocked(Exception):
     pass
 
 
+StoryIndexes = Dict[str, StoryIndex]
+idxs_adapter = TypeAdapter(StoryIndexes)
+
+
 class FileStoryRepository(StoryRepository):
     locklock = Lock()
     locks: dict[str, bool] = {}
@@ -150,6 +168,43 @@ class FileStoryRepository(StoryRepository):
 
     def _repofile(self, story_id: str) -> str:
         return os.path.join(self.repo_dir, f"story-{story_id}.json")
+
+    def _index_file(self) -> str:
+        return os.path.join(self.repo_dir, "00index.json")
+
+    def _get_index(self) -> StoryIndexes:
+        if (Path(self._index_file())).is_file():
+            with open(self._index_file()) as f:
+                return idxs_adapter.validate_json(f.read())
+        else:
+            return {}
+
+    def _save_index(self, idx: StoryIndexes) -> None:
+        with open(self._index_file(), "w") as f:
+            f.write(idxs_adapter.dump_json(idx).decode("utf-8"))
+
+    def _update_index(self, story_id: str, story: Story) -> None:
+        idx = self._get_index()
+        item = idx.get(story_id)
+        if item:
+            date_created = item.created
+        else:
+            date_created = datetime.now()
+
+        updated_item = StoryIndex(
+            id=story_id,
+            title=story.title,
+            chapters=len(story.chapters),
+            characters=len(story.characters),
+            created=date_created,
+            last_modified=datetime.now(),
+        )
+
+        idx[story_id] = updated_item
+        self._save_index(idx)
+
+    def list(self) -> list[StoryIndex]:
+        return list(self._get_index().values())
 
     def lock(self, story_id: str) -> None:
         with self.locklock:
@@ -172,6 +227,9 @@ class FileStoryRepository(StoryRepository):
     def save(self, story_id: str, story: Story) -> None:
         with open(self._repofile(story_id), "w") as f:
             f.write(story.model_dump_json(indent=2))
+
+        with self.locklock:
+            self._update_index(story_id, story)
 
 
 class Command(ABC):

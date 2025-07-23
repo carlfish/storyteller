@@ -1,4 +1,5 @@
 from typing import List
+from datetime import datetime
 from pydantic import BaseModel, field_validator
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, AIMessageChunk
 
@@ -62,11 +63,21 @@ class Story(BaseModel):
         "json_encoders": {BaseMessage: lambda msg: Story.to_saved_message(msg)}
     }
 
+    title: str = "New Story"
     characters: List[Character]
     chapters: List[Chapter]
     scenes: List[Scene]
     old_messages: List[BaseMessage]
     current_messages: List[BaseMessage]
+
+
+class StoryIndex(BaseModel):
+    id: str
+    title: str
+    chapters: int
+    characters: int
+    created: datetime
+    last_modified: datetime
 
 
 class Prompts(BaseModel):

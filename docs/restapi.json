@@ -18,6 +18,25 @@
   ],
   "paths": {
     "/stories": {
+      "get": {
+        "summary": "List all stories",
+        "description": "Retrieves a list of all stories for the authenticated user with basic metadata",
+        "responses": {
+          "200": {
+            "description": "Stories list retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StoryIndex"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "summary": "Create a new story",
         "description": "Creates a new story with the provided character descriptions and returns the story UUID",
@@ -218,6 +237,10 @@
             "format": "uuid",
             "description": "Unique identifier for the story"
           },
+          "title": {
+            "type": "string",
+            "description": "The title of the story"
+          },
           "characters": {
             "type": "array",
             "items": {
@@ -252,6 +275,38 @@
               "type": "object"
             },
             "description": "Active message history"
+          }
+        }
+      },
+      "StoryIndex": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique identifier for the story"
+          },
+          "title": {
+            "type": "string",
+            "description": "The title of the story"
+          },
+          "chapters": {
+            "type": "integer",
+            "description": "Number of chapters in the story"
+          },
+          "characters": {
+            "type": "integer",
+            "description": "Number of characters in the story"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Story creation timestamp"
+          },
+          "last_modified": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Story last modification timestamp"
           }
         }
       },
