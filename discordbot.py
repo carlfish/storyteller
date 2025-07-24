@@ -56,7 +56,7 @@ class ChannelConfigRegistry:
         if not os.path.exists(os.path.join(self.story_dir, self.REGFILE)):
             return ChannelConfigs(channel={})
 
-        with open(os.path.join(self.story_dir, self.REGFILE), "r") as f:
+        with open(os.path.join(self.story_dir, self.REGFILE)) as f:
             return ChannelConfigs.model_validate_json(f.read())
 
     def get_config(self, channel_id: str) -> ChannelConfig:

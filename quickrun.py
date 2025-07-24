@@ -12,7 +12,7 @@ load_dotenv()
 
 
 def load_file(filename: str) -> str:
-    with open(filename, "r") as f:
+    with open(filename) as f:
         return f.read().strip()
 
 

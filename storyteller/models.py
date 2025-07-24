@@ -1,4 +1,3 @@
-from typing import List
 from datetime import datetime
 from pydantic import BaseModel, field_validator
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, AIMessageChunk
@@ -64,11 +63,11 @@ class Story(BaseModel):
     }
 
     title: str = "New Story"
-    characters: List[Character]
-    chapters: List[Chapter]
-    scenes: List[Scene]
-    old_messages: List[BaseMessage]
-    current_messages: List[BaseMessage]
+    characters: list[Character]
+    chapters: list[Chapter]
+    scenes: list[Scene]
+    old_messages: list[BaseMessage]
+    current_messages: list[BaseMessage]
 
 
 class StoryIndex(BaseModel):
@@ -113,7 +112,7 @@ class Characters(BaseModel):
     prompt.
     """
 
-    characters: List[Character]
+    characters: list[Character]
 
 
 class Scenes(BaseModel):
@@ -122,7 +121,7 @@ class Scenes(BaseModel):
     prompt.
     """
 
-    scenes: List[Scene]
+    scenes: list[Scene]
 
 
 class OpeningSuggestions(BaseModel):
@@ -130,4 +129,4 @@ class OpeningSuggestions(BaseModel):
     structured output for the opening suggestions prompt.
     """
 
-    suggestions: List[OpeningSuggestion]
+    suggestions: list[OpeningSuggestion]

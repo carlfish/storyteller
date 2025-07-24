@@ -1,36 +1,26 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.1.0",
   "info": {
     "title": "Storyteller API",
-    "version": "0.1.0",
-    "description": "REST API for creating and managing interactive stories with AI-powered storytelling"
+    "version": "0.1.0"
   },
-  "servers": [
-    {
-      "url": "http://localhost:8000",
-      "description": "Development server"
-    }
-  ],
-  "security": [
-    {
-      "BearerAuth": []
-    }
-  ],
   "paths": {
     "/stories": {
       "get": {
-        "summary": "List all stories",
-        "description": "Retrieves a list of all stories for the authenticated user with basic metadata",
+        "summary": "List Stories",
+        "description": "List all stories for the current user",
+        "operationId": "list_stories_stories_get",
         "responses": {
           "200": {
-            "description": "Stories list retrieved successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/StoryIndex"
-                  }
+                  },
+                  "type": "array",
+                  "title": "Response List Stories Stories Get"
                 }
               }
             }
@@ -38,37 +28,55 @@
         }
       },
       "post": {
-        "summary": "Create a new story",
-        "description": "Creates a new story with the provided character descriptions and returns the story UUID",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateStoryRequest"
+        "summary": "Create Story",
+        "description": "Create a new story and return redirect to its UUID endpoint",
+        "operationId": "create_story_stories_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedStory"
+                }
               }
             }
           }
+        }
+      }
+    },
+    "/characters/generate": {
+      "post": {
+        "summary": "Generate Characters",
+        "description": "Generate characters for a story",
+        "operationId": "generate_characters_characters_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateCharactersRequest"
+              }
+            }
+          },
+          "required": true
         },
         "responses": {
-          "201": {
-            "description": "Story created successfully",
-            "headers": {
-              "Location": {
-                "description": "URL of the created story",
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
                 "schema": {
-                  "type": "string",
-                  "example": "/stories/550e8400-e29b-41d4-a716-446655440000"
+                  "$ref": "#/components/schemas/Characters"
                 }
               }
             }
           },
-          "500": {
-            "description": "Internal server error",
+          "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -78,23 +86,23 @@
     },
     "/stories/{story_uuid}": {
       "get": {
-        "summary": "Get story details",
-        "description": "Retrieves the complete story state including characters, chapters, scenes, and message history",
+        "summary": "Get Story",
+        "description": "Get the full story state",
+        "operationId": "get_story_stories__story_uuid__get",
         "parameters": [
           {
             "name": "story_uuid",
             "in": "path",
             "required": true,
-            "description": "UUID of the story to retrieve",
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "title": "Story Uuid"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Story details retrieved successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -103,12 +111,12 @@
               }
             }
           },
-          "404": {
-            "description": "Story not found",
+          "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -116,17 +124,17 @@
         }
       },
       "post": {
-        "summary": "Execute a command on the story",
-        "description": "Executes a storytelling command (chat, retry, rewind, fix, replace, chapter) on the specified story",
+        "summary": "Execute Command",
+        "description": "Execute a command on the story",
+        "operationId": "execute_command_stories__story_uuid__post",
         "parameters": [
           {
             "name": "story_uuid",
             "in": "path",
             "required": true,
-            "description": "UUID of the story to execute the command on",
             "schema": {
               "type": "string",
-              "format": "uuid"
+              "title": "Story Uuid"
             }
           }
         ],
@@ -142,7 +150,7 @@
         },
         "responses": {
           "200": {
-            "description": "Command executed successfully",
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
@@ -151,22 +159,12 @@
               }
             }
           },
-          "404": {
-            "description": "Story not found",
+          "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -176,148 +174,407 @@
     }
   },
   "components": {
-    "securitySchemes": {
-      "BearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "Auth0 JWT Bearer token with 'storyteller:use' scope required for all endpoints"
-      }
-    },
     "schemas": {
-      "CreateStoryRequest": {
+      "BaseMessage": {
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "additionalProperties": true,
+                      "type": "object"
+                    }
+                  ]
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Content"
+          },
+          "additional_kwargs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Additional Kwargs"
+          },
+          "response_metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Response Metadata"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          }
+        },
+        "additionalProperties": true,
         "type": "object",
-        "required": ["characters"],
+        "required": [
+          "content",
+          "type"
+        ],
+        "title": "BaseMessage",
+        "description": "Base abstract message class.\n\nMessages are the inputs and outputs of ChatModels."
+      },
+      "Chapter": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "summary"
+        ],
+        "title": "Chapter"
+      },
+      "Character": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "bio": {
+            "type": "string",
+            "title": "Bio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "role",
+          "bio"
+        ],
+        "title": "Character"
+      },
+      "Characters": {
         "properties": {
           "characters": {
-            "type": "string",
-            "description": "Character descriptions to initialize the story with",
-            "example": "A brave knight named Sir Galahad who seeks the Holy Grail. A wise wizard named Merlin who guides heroes on their quests."
+            "items": {
+              "$ref": "#/components/schemas/Character"
+            },
+            "type": "array",
+            "title": "Characters"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "characters"
+        ],
+        "title": "Characters",
+        "description": "Wrapper for a list of characters, used as\nstructured output for the character summary\nprompt."
       },
       "CommandRequest": {
-        "type": "object",
-        "required": ["command"],
         "properties": {
           "command": {
             "type": "string",
-            "enum": ["chat", "retry", "rewind", "fix", "replace", "chapter"],
-            "description": "The command to execute on the story"
+            "title": "Command"
           },
           "body": {
-            "type": "string",
-            "description": "Optional command body (required for chat, fix, replace, and chapter commands)",
-            "example": "I walk into the tavern and order a drink"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "command"
+        ],
+        "title": "CommandRequest"
       },
       "CommandResponse": {
-        "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["success"],
-            "description": "Status of the command execution"
+            "title": "Status"
           },
           "messages": {
-            "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "Response messages from the AI and system"
+            "type": "array",
+            "title": "Messages"
           }
-        }
-      },
-      "Story": {
+        },
         "type": "object",
+        "required": [
+          "status",
+          "messages"
+        ],
+        "title": "CommandResponse"
+      },
+      "CreatedStory": {
         "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Unique identifier for the story"
-          },
           "title": {
             "type": "string",
-            "description": "The title of the story"
+            "title": "Title",
+            "default": "New Story"
           },
           "characters": {
-            "type": "array",
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/Character"
             },
-            "description": "Character summaries"
+            "type": "array",
+            "title": "Characters"
           },
           "chapters": {
-            "type": "array",
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/Chapter"
             },
-            "description": "Chapter summaries"
+            "type": "array",
+            "title": "Chapters"
           },
           "scenes": {
-            "type": "array",
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/Scene"
             },
-            "description": "List of scenes in the current chapter"
+            "type": "array",
+            "title": "Scenes"
           },
           "old_messages": {
-            "type": "array",
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/BaseMessage"
             },
-            "description": "Archived message history"
+            "type": "array",
+            "title": "Old Messages"
           },
           "current_messages": {
-            "type": "array",
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/BaseMessage"
             },
-            "description": "Active message history"
+            "type": "array",
+            "title": "Current Messages"
+          },
+          "story_id": {
+            "type": "string",
+            "title": "Story Id"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "characters",
+          "chapters",
+          "scenes",
+          "old_messages",
+          "current_messages",
+          "story_id"
+        ],
+        "title": "CreatedStory"
+      },
+      "GenerateCharactersRequest": {
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt"
+        ],
+        "title": "GenerateCharactersRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Scene": {
+        "properties": {
+          "time_and_location": {
+            "type": "string",
+            "title": "Time And Location"
+          },
+          "events": {
+            "type": "string",
+            "title": "Events"
+          }
+        },
+        "type": "object",
+        "required": [
+          "time_and_location",
+          "events"
+        ],
+        "title": "Scene"
+      },
+      "Story": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": "New Story"
+          },
+          "characters": {
+            "items": {
+              "$ref": "#/components/schemas/Character"
+            },
+            "type": "array",
+            "title": "Characters"
+          },
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/Chapter"
+            },
+            "type": "array",
+            "title": "Chapters"
+          },
+          "scenes": {
+            "items": {
+              "$ref": "#/components/schemas/Scene"
+            },
+            "type": "array",
+            "title": "Scenes"
+          },
+          "old_messages": {
+            "items": {
+              "$ref": "#/components/schemas/BaseMessage"
+            },
+            "type": "array",
+            "title": "Old Messages"
+          },
+          "current_messages": {
+            "items": {
+              "$ref": "#/components/schemas/BaseMessage"
+            },
+            "type": "array",
+            "title": "Current Messages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "characters",
+          "chapters",
+          "scenes",
+          "old_messages",
+          "current_messages"
+        ],
+        "title": "Story"
       },
       "StoryIndex": {
-        "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "format": "uuid",
-            "description": "Unique identifier for the story"
+            "title": "Id"
           },
           "title": {
             "type": "string",
-            "description": "The title of the story"
+            "title": "Title"
           },
           "chapters": {
             "type": "integer",
-            "description": "Number of chapters in the story"
+            "title": "Chapters"
           },
           "characters": {
             "type": "integer",
-            "description": "Number of characters in the story"
+            "title": "Characters"
           },
           "created": {
             "type": "string",
             "format": "date-time",
-            "description": "Story creation timestamp"
+            "title": "Created"
           },
           "last_modified": {
             "type": "string",
             "format": "date-time",
-            "description": "Story last modification timestamp"
+            "title": "Last Modified"
           }
-        }
-      },
-      "ErrorResponse": {
+        },
         "type": "object",
+        "required": [
+          "id",
+          "title",
+          "chapters",
+          "characters",
+          "created",
+          "last_modified"
+        ],
+        "title": "StoryIndex"
+      },
+      "ValidationError": {
         "properties": {
-          "detail": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
             "type": "string",
-            "description": "Error message describing what went wrong"
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   }

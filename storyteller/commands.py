@@ -1,4 +1,3 @@
-from typing import List
 from .engine import Command, Chains, Response, run_chat
 from .models import (
     Character,
@@ -17,7 +16,7 @@ class CommandError(Exception):
     pass
 
 
-def _make_chapters(chapters: List[Chapter]):
+def _make_chapters(chapters: list[Chapter]):
     summary = ""
     for idx, chapter in enumerate(chapters):
         summary = (
@@ -27,7 +26,7 @@ def _make_chapters(chapters: List[Chapter]):
     return summary
 
 
-def _make_scenes(scenes: List[Scene]):
+def _make_scenes(scenes: list[Scene]):
     summary = ""
     for idx, scene in enumerate(scenes):
         summary = summary + f"### {scene.time_and_location}\n{scene.events}\n\n"
@@ -146,7 +145,7 @@ class SummarizeCommand(Command):
         self.min_tokens = min_tokens
         self.max_tokens = max_tokens
 
-    def trim(self, messages: List[BaseMessage]):
+    def trim(self, messages: list[BaseMessage]):
         old = []
         remaining = messages.copy()
 
@@ -157,8 +156,8 @@ class SummarizeCommand(Command):
         return (old, remaining)
 
     async def update_scenes(
-        self, old_scenes: List[Scene], messages, msg_count: int
-    ) -> List[Scene]:
+        self, old_scenes: list[Scene], messages, msg_count: int
+    ) -> list[Scene]:
         await self.response.send_message(
             f"⌛ Pruning {len(messages)} of {msg_count} messages: updating scene summaries…"
         )
@@ -175,8 +174,8 @@ class SummarizeCommand(Command):
         return response.scenes
 
     async def update_characters(
-        self, old_characters: List[Character], messages, msg_count: int
-    ) -> List[Character]:
+        self, old_characters: list[Character], messages, msg_count: int
+    ) -> list[Character]:
         await self.response.send_message(
             f"⌛ Pruning {len(messages)} of {msg_count} messages: Updating character bios…"
         )
@@ -260,7 +259,7 @@ class GenerateCharactersCommand(Command):
         self.response = response
         self.prompt = prompt
 
-    async def make_characters(self, descriptions: str) -> List[Character]:
+    async def make_characters(self, descriptions: str) -> list[Character]:
         response: Characters = await self.chains.character_create_chain.ainvoke(
             {"characters": descriptions}
         )

@@ -3,14 +3,14 @@ import json
 import os
 import uuid
 from typing import Any, Optional
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, status, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from fastapi_plugin import Auth0FastAPI
 
-from storyteller.models import Story, Characters
+from storyteller.models import Story, Characters, StoryIndex
 from storyteller.engine import (
     FileStoryRepository,
     StoryEngine,
@@ -47,18 +47,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-parser = argparse.ArgumentParser(description="Tell a story")
-add_standard_model_args(parser)
-model = init_model(parser.parse_args())
-
-prompts = create_prompts(PROMPT_DIR)
-
-chains = Chains(model=model, prompts=prompts)
+model = None
+prompts = None
+chains = None
 
 auth = Auth0FastAPI(domain=AUTH0_DOMAIN, audience=AUTH0_API_AUDIENCE)
 
 use_scope = ["storyteller:use"]
-
 
 def get_story_repository(user_id: str) -> StoryRepository:
     hashed_id = hashlib.sha256(user_id.encode()).hexdigest()
@@ -100,31 +95,27 @@ class APIResponse(c.Response):
         else:
             self.messages.append(msg)
 
+class CreatedStory(Story):
+    story_id: str
 
 def make_characters(descriptions: str) -> Characters:
     return chains.character_create_chain.invoke({"characters": descriptions})
 
-
-def decorate_story(story_id: str, story: Story) -> dict[str, Any]:
-    story_dict = story.model_dump()
-    story_dict["id"] = story_id
-    return story_dict
-
-
 @app.get("/stories")
 async def list_stories(
     claims: dict = Depends(auth.require_auth(scopes=use_scope)),
-):
+) -> list[StoryIndex]:
     """List all stories for the current user"""
     user_id = claims["sub"]
     repo = get_story_repository(user_id)
     return repo.list()
 
 
-@app.post("/stories")
+@app.post("/stories", status_code=status.HTTP_201_CREATED)
 async def create_story(
+    response: Response,
     claims: dict = Depends(auth.require_auth(scopes=use_scope)),
-):
+) -> CreatedStory:
     """Create a new story and return redirect to its UUID endpoint"""
     user_id = claims["sub"]
 
@@ -135,31 +126,27 @@ async def create_story(
     repo = get_story_repository(user_id)
     repo.save(story_uuid, story)
 
-    return JSONResponse(
-        content=decorate_story(story_uuid, story),
-        status_code=201,
-        headers={"Location": f"/stories/{story_uuid}"},
-    )
+    response.headers["Location"] = f"/stories/{story_uuid}"
+    return CreatedStory(**story.model_dump(), story_id=story_uuid)
 
 
 @app.post("/characters/generate")
 async def generate_characters(
     request: GenerateCharactersRequest,
     claims: dict = Depends(auth.require_auth(scopes=use_scope)),
-):
+) -> Characters:
     """Generate characters for a story"""
 
     print(claims)
 
     characters = make_characters(request.prompt)
-
-    return characters.model_dump()
+    return characters
 
 
 @app.get("/stories/{story_uuid}")
 async def get_story(
     story_uuid: str, claims: dict = Depends(auth.require_auth(scopes=use_scope))
-):
+) -> Story:
     """Get the full story state"""
 
     repo = get_story_repository(claims["sub"])
@@ -168,15 +155,18 @@ async def get_story(
         raise HTTPException(status_code=404, detail="Story not found")
 
     story = repo.load(story_uuid)
-    return decorate_story(story_uuid, story)
+    return story
 
+class CommandResponse(BaseModel):
+    status: str
+    messages: list[str]
 
 @app.post("/stories/{story_uuid}")
 async def execute_command(
     story_uuid: str,
     command_request: CommandRequest,
     claims: dict = Depends(auth.require_auth(scopes=use_scope)),
-):
+) -> CommandResponse:
     """Execute a command on the story"""
 
     repo = get_story_repository(claims["sub"])
@@ -198,7 +188,10 @@ async def execute_command(
         )
         await engine.run_command(story_uuid, summarize_cmd)
 
-        return {"status": "success", "messages": response.messages}
+        return CommandResponse(
+            status="success",
+            messages=response.messages
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -236,5 +229,10 @@ def parse_command(
 
 if __name__ == "__main__":
     import uvicorn
+    parser = argparse.ArgumentParser(description="Tell a story")
+    add_standard_model_args(parser)
+    model = init_model(parser.parse_args())
+    prompts = create_prompts(PROMPT_DIR)
+    chains = Chains(model=model, prompts=prompts)
 
     uvicorn.run(app, host=HTTP_HOST, port=HTTP_PORT)

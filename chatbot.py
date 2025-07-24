@@ -1,5 +1,4 @@
 import re
-from typing import List
 from dotenv import load_dotenv
 from storyteller.models import Context, Story, Character
 from storyteller.engine import FileStoryRepository, StoryEngine, Chains, create_prompts
@@ -43,7 +42,7 @@ def init_context(prompt_dir: str):
     )
 
 
-def make_characters(chain, descriptions: str) -> List[Character]:
+def make_characters(chain, descriptions: str) -> list[Character]:
     return chain.invoke({"characters": descriptions}).characters
 
 

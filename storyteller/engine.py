@@ -21,7 +21,8 @@ from .models import (
 from .common import load_file
 
 from pydantic import BaseModel, TypeAdapter
-from typing import List, Sequence, TypeVar, Dict
+from typing import TypeVar
+from collections.abc import Sequence
 from threading import Lock
 from pathlib import Path
 from datetime import datetime
@@ -38,7 +39,7 @@ class StoryBackedMessageHistory(BaseChatMessageHistory):
         self.story = story
 
     @property
-    def messages(self) -> List[BaseMessage]:
+    def messages(self) -> list[BaseMessage]:
         return self.story.current_messages
 
     @messages.setter
@@ -155,7 +156,7 @@ class StoryLocked(Exception):
     pass
 
 
-StoryIndexes = Dict[str, StoryIndex]
+StoryIndexes = dict[str, StoryIndex]
 idxs_adapter = TypeAdapter(StoryIndexes)
 
 
@@ -276,10 +277,10 @@ class Response(ABC):
 async def run_chat(
     chat_chain: Runnable,
     context: dict,
-    current_messages: List[BaseMessage],
+    current_messages: list[BaseMessage],
     user_input: str,
     response: Response,
-) -> List[BaseMessage]:
+) -> list[BaseMessage]:
     chunks = []
 
     await response.start_stream()

@@ -16,10 +16,10 @@ def load_file(directory: str, fallback_directory: str, filename: str) -> str:
     fallback_path = os.path.join(fallback_directory, filename)
 
     try:
-        with open(primary_path, "r") as f:
+        with open(primary_path) as f:
             return f.read().strip()
     except FileNotFoundError:
-        with open(fallback_path, "r") as f:
+        with open(fallback_path) as f:
             return f.read().strip()
 
 
