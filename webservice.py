@@ -55,6 +55,7 @@ auth = Auth0FastAPI(domain=AUTH0_DOMAIN, audience=AUTH0_API_AUDIENCE)
 
 use_scope = ["storyteller:use"]
 
+
 def get_story_repository(user_id: str) -> StoryRepository:
     hashed_id = hashlib.sha256(user_id.encode()).hexdigest()
     repo_dir = os.path.expanduser(f"~/story_repo/{hashed_id}")
@@ -95,11 +96,14 @@ class APIResponse(c.Response):
         else:
             self.messages.append(msg)
 
+
 class CreatedStory(Story):
     story_id: str
 
+
 def make_characters(descriptions: str) -> Characters:
     return chains.character_create_chain.invoke({"characters": descriptions})
+
 
 @app.get("/stories")
 async def list_stories(
@@ -157,9 +161,11 @@ async def get_story(
     story = repo.load(story_uuid)
     return story
 
+
 class CommandResponse(BaseModel):
     status: str
     messages: list[str]
+
 
 @app.post("/stories/{story_uuid}")
 async def execute_command(
@@ -188,10 +194,7 @@ async def execute_command(
         )
         await engine.run_command(story_uuid, summarize_cmd)
 
-        return CommandResponse(
-            status="success",
-            messages=response.messages
-        )
+        return CommandResponse(status="success", messages=response.messages)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -229,6 +232,7 @@ def parse_command(
 
 if __name__ == "__main__":
     import uvicorn
+
     parser = argparse.ArgumentParser(description="Tell a story")
     add_standard_model_args(parser)
     model = init_model(parser.parse_args())
