@@ -21,6 +21,9 @@ check: lint format
 
 lint-all: lint format typecheck
 
+update-swagger:
+    uv run python scripts/dump_swagger.py > docs/restapi.json
+
 # Default app runners
 
 chatbot provider='openai': 
@@ -32,10 +35,6 @@ discord provider='openai':
 webservice provider='openai':
     uv run python webservice.py -p {{provider}}
 
-# Generate an auth token for local testing
+# Generate an auth token for local testing (requires properly configured auth0 CLI)
 generate-token:
     auth0 test token $AUTH0_TEST_CLIENT_ID --audience $AUTH0_API_AUDIENCE --scopes storyteller:use
-
-# Update OpenAPI documentation
-update-swagger:
-    uv run python scripts/dump_swagger.py > docs/restapi.json
