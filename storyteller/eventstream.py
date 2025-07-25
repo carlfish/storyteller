@@ -63,7 +63,7 @@ class StorySnapshot(BaseModel):
     first_event: datetime
     last_event: datetime
 
-    unsummarized_messages: list[ChatMessage]
+    chat_messages: list[ChatMessage]
 
 
 def new_snapshot():
@@ -74,7 +74,7 @@ def new_snapshot():
     return StorySnapshot(
         first_event=snapshot_ts,
         last_event=snapshot_ts,
-        unsummarized_messages=[],
+        chat_messages=[],
     )
 
 
@@ -90,7 +90,7 @@ def snapshot(events: EventStream, start_id: EventId | None = None) -> StorySnaps
     else:
         next_id = start_id
 
-    unsummarized_messages = []
+    chat_messages = []
     first_event_ts = None
     last_event_ts = None
     for event in reversed(events):
@@ -101,7 +101,7 @@ def snapshot(events: EventStream, start_id: EventId | None = None) -> StorySnaps
             first_event_ts = event.timestamp
 
             if isinstance(event, ChatMessage):
-                unsummarized_messages.append(event)
+                chat_messages.append(event)
 
             next_id = event.parent
             if next_id == None:
@@ -110,9 +110,9 @@ def snapshot(events: EventStream, start_id: EventId | None = None) -> StorySnaps
     if next_id != None:
         raise ValueError(f"Parent event with ID {next_id} not found in stream")
 
-    unsummarized_messages.reverse()
+    chat_messages.reverse()
     return StorySnapshot(
         first_event=datetime.fromtimestamp(first_event_ts),
         last_event=datetime.fromtimestamp(last_event_ts),
-        unsummarized_messages=list(unsummarized_messages),
+        chat_messages=list(chat_messages),
     )

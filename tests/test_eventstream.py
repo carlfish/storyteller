@@ -7,8 +7,8 @@ def test_snapshot_empty_eventstream() -> None:
     result = snapshot(empty_stream)
     expected = new_snapshot()
 
-    assert result.unsummarized_messages == expected.unsummarized_messages
-    assert len(result.unsummarized_messages) == 0
+    assert result.chat_messages == expected.chat_messages
+    assert len(result.chat_messages) == 0
 
 
 def test_snapshot_with_chat_messages() -> None:
@@ -37,10 +37,10 @@ def test_snapshot_with_chat_messages() -> None:
     event_stream: EventStream = [message1, message2, message3]
     result = snapshot(event_stream)
 
-    assert len(result.unsummarized_messages) == 3
-    assert result.unsummarized_messages[0] == message1
-    assert result.unsummarized_messages[1] == message2
-    assert result.unsummarized_messages[2] == message3
+    assert len(result.chat_messages) == 3
+    assert result.chat_messages[0] == message1
+    assert result.chat_messages[1] == message2
+    assert result.chat_messages[2] == message3
 
 
 def test_snapshot_with_start_value() -> None:
@@ -69,9 +69,9 @@ def test_snapshot_with_start_value() -> None:
     event_stream: EventStream = [message1, message2, message3]
     result = snapshot(event_stream, start_id=2)
 
-    assert len(result.unsummarized_messages) == 2
-    assert result.unsummarized_messages[0] == message1
-    assert result.unsummarized_messages[1] == message2
+    assert len(result.chat_messages) == 2
+    assert result.chat_messages[0] == message1
+    assert result.chat_messages[1] == message2
 
 
 def test_snapshot_follows_parent_chain() -> None:
@@ -100,9 +100,9 @@ def test_snapshot_follows_parent_chain() -> None:
     event_stream: EventStream = [message1, message2, message3]
     result = snapshot(event_stream)
 
-    assert len(result.unsummarized_messages) == 2
-    assert result.unsummarized_messages[0] == message1
-    assert result.unsummarized_messages[1] == message3
+    assert len(result.chat_messages) == 2
+    assert result.chat_messages[0] == message1
+    assert result.chat_messages[1] == message3
 
 
 def test_snapshot_sets_first_and_last_event_timestamps() -> None:
@@ -184,7 +184,7 @@ def test_snapshot_with_noop_events_sets_correct_timestamps() -> None:
     # Should set timestamps from the NoOp events even though no chat messages
     assert result.first_event.timestamp() == 1500.0  # noop1 timestamp
     assert result.last_event.timestamp() == 2500.0  # noop2 timestamp
-    assert len(result.unsummarized_messages) == 0  # No chat messages in result
+    assert len(result.chat_messages) == 0  # No chat messages in result
 
 
 def test_snapshot_fails_with_missing_parent() -> None:
