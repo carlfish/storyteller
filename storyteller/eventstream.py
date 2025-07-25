@@ -86,13 +86,14 @@ def snapshot(events: EventStream, start_id: EventId | None = None) -> StorySnaps
     if len(events) == 0:
         return new_snapshot()
     elif start_id == None:
-        next_id = events[-1].id
+        next_id: int | None = events[-1].id
     else:
         next_id = start_id
 
     chat_messages = []
     first_event_ts = None
     last_event_ts = None
+
     for event in reversed(events):
         if event.id == next_id:
             if last_event_ts == None:
@@ -109,6 +110,12 @@ def snapshot(events: EventStream, start_id: EventId | None = None) -> StorySnaps
 
     if next_id != None:
         raise ValueError(f"Parent event with ID {next_id} not found in stream")
+
+    # Just-in-case check that makes the typechecker happy.
+    if first_event_ts == None or last_event_ts == None:
+        raise ValueError(
+            "Problem parsing event stream: unable to determine start or end time"
+        )
 
     chat_messages.reverse()
     return StorySnapshot(
