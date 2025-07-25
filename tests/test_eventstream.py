@@ -2,6 +2,33 @@ import pytest
 from storyteller.eventstream import *
 
 
+def create_default_chat_messages() -> list[ChatMessage]:
+    """Create a default chain of 3 connected chat messages for testing."""
+    return [
+        ChatMessage(
+            id=1,
+            parent=None,
+            timestamp=1000,
+            source=MessageSource.Human,
+            content="Hello, tell me a story",
+        ),
+        ChatMessage(
+            id=2,
+            parent=1,
+            timestamp=2000,
+            source=MessageSource.Bot,
+            content="Once upon a time...",
+        ),
+        ChatMessage(
+            id=3,
+            parent=2,
+            timestamp=3000,
+            source=MessageSource.Human,
+            content="Continue the story",
+        ),
+    ]
+
+
 def test_snapshot_empty_eventstream() -> None:
     empty_stream: EventStream = []
     result = snapshot(empty_stream)
@@ -12,127 +39,61 @@ def test_snapshot_empty_eventstream() -> None:
 
 
 def test_snapshot_with_chat_messages() -> None:
-    message1 = ChatMessage(
-        id=1,
-        parent=None,
-        timestamp=1,
-        source=MessageSource.Human,
-        content="Hello, tell me a story",
-    )
-    message2 = ChatMessage(
-        id=2,
-        parent=1,
-        timestamp=2,
-        source=MessageSource.Bot,
-        content="Once upon a time...",
-    )
-    message3 = ChatMessage(
-        id=3,
-        parent=2,
-        timestamp=3,
-        source=MessageSource.Human,
-        content="Continue the story",
-    )
+    messages = create_default_chat_messages()
+    # Adjust timestamps for this specific test
+    messages[0].timestamp = 1
+    messages[1].timestamp = 2
+    messages[2].timestamp = 3
 
-    event_stream: EventStream = [message1, message2, message3]
+    event_stream: EventStream = messages
     result = snapshot(event_stream)
 
     assert len(result.chat_messages) == 3
-    assert result.chat_messages[0] == message1
-    assert result.chat_messages[1] == message2
-    assert result.chat_messages[2] == message3
+    assert result.chat_messages[0] == messages[0]
+    assert result.chat_messages[1] == messages[1]
+    assert result.chat_messages[2] == messages[2]
 
 
 def test_snapshot_with_start_value() -> None:
-    message1 = ChatMessage(
-        id=1,
-        parent=None,
-        timestamp=1,
-        source=MessageSource.Human,
-        content="Hello, tell me a story",
-    )
-    message2 = ChatMessage(
-        id=2,
-        parent=1,
-        timestamp=2,
-        source=MessageSource.Bot,
-        content="Once upon a time...",
-    )
-    message3 = ChatMessage(
-        id=3,
-        parent=2,
-        timestamp=3,
-        source=MessageSource.Human,
-        content="Continue the story",
-    )
+    messages = create_default_chat_messages()
+    # Adjust timestamps for this specific test
+    messages[0].timestamp = 1
+    messages[1].timestamp = 2
+    messages[2].timestamp = 3
 
-    event_stream: EventStream = [message1, message2, message3]
+    event_stream: EventStream = messages
     result = snapshot(event_stream, start_id=2)
 
     assert len(result.chat_messages) == 2
-    assert result.chat_messages[0] == message1
-    assert result.chat_messages[1] == message2
+    assert result.chat_messages[0] == messages[0]
+    assert result.chat_messages[1] == messages[1]
 
 
 def test_snapshot_follows_parent_chain() -> None:
-    message1 = ChatMessage(
-        id=1,
-        parent=None,
-        timestamp=2,
-        source=MessageSource.Human,
-        content="Hello, tell me a story",
-    )
-    message2 = ChatMessage(
-        id=2,
-        parent=1,
-        timestamp=2,
-        source=MessageSource.Bot,
-        content="Once upon a time...",
-    )
-    message3 = ChatMessage(
-        id=3,
-        parent=1,
-        timestamp=2,
-        source=MessageSource.Human,
-        content="Continue the story",
-    )
+    messages = create_default_chat_messages()
+    # Modify parent chain: message3 points to message1 instead of message2
+    messages[2].parent = 1
+    # Set same timestamp for all
+    for msg in messages:
+        msg.timestamp = 2
 
-    event_stream: EventStream = [message1, message2, message3]
+    event_stream: EventStream = messages
     result = snapshot(event_stream)
 
     assert len(result.chat_messages) == 2
-    assert result.chat_messages[0] == message1
-    assert result.chat_messages[1] == message3
+    assert result.chat_messages[0] == messages[0]
+    assert result.chat_messages[1] == messages[2]
 
 
 def test_snapshot_sets_first_and_last_event_timestamps() -> None:
-    message1 = ChatMessage(
-        id=1,
-        parent=None,
-        timestamp=1000,
-        source=MessageSource.Human,
-        content="First message",
-    )
-    message2 = ChatMessage(
-        id=2,
-        parent=1,
-        timestamp=2000,
-        source=MessageSource.Bot,
-        content="Second message",
-    )
-    message3 = ChatMessage(
-        id=3,
-        parent=2,
-        timestamp=3000,
-        source=MessageSource.Human,
-        content="Third message",
-    )
+    messages = create_default_chat_messages()
+    # timestamps are already 1000, 2000, 3000 from the helper function
 
-    event_stream: EventStream = [message1, message2, message3]
+    event_stream: EventStream = messages
     result = snapshot(event_stream)
 
-    assert result.first_event.timestamp() == 1000.0  # message1 timestamp / 1000
-    assert result.last_event.timestamp() == 3000.0  # message3 timestamp / 1000
+    assert result.first_event.timestamp() == 1000.0  # messages[0] timestamp
+    assert result.last_event.timestamp() == 3000.0  # messages[2] timestamp
 
 
 def test_snapshot_empty_stream_sets_some_default_time() -> None:
@@ -144,34 +105,15 @@ def test_snapshot_empty_stream_sets_some_default_time() -> None:
 
 
 def test_snapshot_with_start_id_sets_correct_timestamps() -> None:
-    message1 = ChatMessage(
-        id=1,
-        parent=None,
-        timestamp=1000,
-        source=MessageSource.Human,
-        content="First message",
-    )
-    message2 = ChatMessage(
-        id=2,
-        parent=1,
-        timestamp=2000,
-        source=MessageSource.Bot,
-        content="Second message",
-    )
-    message3 = ChatMessage(
-        id=3,
-        parent=2,
-        timestamp=3000,
-        source=MessageSource.Human,
-        content="Third message",
-    )
+    messages = create_default_chat_messages()
+    # timestamps are already 1000, 2000, 3000 from the helper function
 
-    event_stream: EventStream = [message1, message2, message3]
+    event_stream: EventStream = messages
     result = snapshot(event_stream, start_id=2)
 
-    # Should only include message1 and message2
-    assert result.first_event.timestamp() == 1000.0  # message1 timestamp / 1000
-    assert result.last_event.timestamp() == 2000.0  # message2 timestamp / 1000
+    # Should only include messages[0] and messages[1]
+    assert result.first_event.timestamp() == 1000.0  # messages[0] timestamp
+    assert result.last_event.timestamp() == 2000.0  # messages[1] timestamp
 
 
 def test_snapshot_with_noop_events_sets_correct_timestamps() -> None:
@@ -188,24 +130,20 @@ def test_snapshot_with_noop_events_sets_correct_timestamps() -> None:
 
 
 def test_snapshot_fails_with_missing_parent() -> None:
-    # Message with parent ID that doesn't exist in the stream
-    message1 = ChatMessage(
-        id=1,
-        parent=None,
-        timestamp=1000,
-        source=MessageSource.Human,
-        content="First message",
-    )
-    message2 = ChatMessage(
-        id=2,
-        parent=99,  # Parent ID 99 doesn't exist in stream
-        timestamp=2000,
-        source=MessageSource.Bot,
-        content="Second message",
-    )
+    messages = create_default_chat_messages()
+    messages[1].parent = 99
 
-    event_stream: EventStream = [message1, message2]
+    event_stream: EventStream = messages
 
     # Should raise an exception when trying to follow parent chain to non-existent parent
     with pytest.raises(ValueError, match="Parent event with ID 99 not found in stream"):
         snapshot(event_stream)
+
+def test_snapshot_fails_with_missing_start_event() -> None:
+    messages = create_default_chat_messages()
+
+    event_stream: EventStream = messages
+
+    # Should raise an exception when trying to follow parent chain to non-existent parent
+    with pytest.raises(ValueError, match="Parent event with ID 99 not found in stream"):
+        snapshot(event_stream, start_id=99)
